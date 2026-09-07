@@ -6,6 +6,8 @@ export type DigestSignupProps = {
   role?: string
   focusAreas?: string[]
   sourceRef?: string
+  /** Open a mailto draft with the current report URL after enroll. */
+  mailReport?: boolean
 }
 
 type Status = 'idle' | 'sending' | 'sent' | 'skipped' | 'error'
@@ -14,11 +16,19 @@ function letterBase(): string {
   return LETTER_URL
 }
 
+function openReportMailto(to: string) {
+  if (typeof window === 'undefined') return
+  const subject = 'Your Field Report'
+  const body = window.location.href
+  window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+}
+
 export function useLetterSubscribe({
   industry,
   role,
   focusAreas,
   sourceRef,
+  mailReport = false,
 }: DigestSignupProps) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -56,6 +66,7 @@ export function useLetterSubscribe({
         throw new Error(data.error ?? `request failed (${res.status})`)
       }
       setStatus(data.skipped === 'already_enrolled' ? 'skipped' : 'sent')
+      if (mailReport) openReportMailto(email.trim())
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')

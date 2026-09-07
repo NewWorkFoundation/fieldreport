@@ -22,7 +22,10 @@ import {
   AOI_ATTRIBUTION,
   COMPETITION_COPY,
   COMPETITION_DOT,
+  competitionLevelFromRatio,
   ENTRY_BARRIER_COPY,
+  ENTRY_BARRIER_DOT,
+  entryBarrierLevel,
   SEVERITY_LEGEND,
   aiBandLive,
 } from '../lib/labels'
@@ -220,8 +223,8 @@ export function ResultsPage() {
       const ap = altSocs.has(a.soc) ? 0 : 1
       const bp = altSocs.has(b.soc) ? 0 : 1
       if (ap !== bp) return ap - bp
-      const av = sortValue(a, sortField, aiImpactBySoc)
-      const bv = sortValue(b, sortField, aiImpactBySoc)
+      const av = sortValue(a, sortField, aiImpactBySoc, wageTrendBySoc)
+      const bv = sortValue(b, sortField, aiImpactBySoc, wageTrendBySoc)
       if (typeof av === 'string' && typeof bv === 'string') {
         return sortDirection === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
       }
@@ -230,7 +233,7 @@ export function ResultsPage() {
       return sortDirection === 'asc' ? an - bn : bn - an
     })
     return list
-  }, [visible, sortField, sortDirection, aiImpactBySoc, altSocs])
+  }, [visible, sortField, sortDirection, aiImpactBySoc, wageTrendBySoc, altSocs])
 
   const selectedRoles = useMemo(
     () => sorted.filter((o) => selectedSocs.has(o.soc)).map((o) => sentenceCase(o.title)),
@@ -652,6 +655,7 @@ function GameplanCta({
     role: selectedRoles[0] ?? title,
     focusAreas: selectedRoles.length ? selectedRoles : [title],
     sourceRef,
+    mailReport: true,
   })
 
   useEffect(() => {
@@ -1080,7 +1084,10 @@ function OccupationTable({
                   <AiRiskCell occ={occ} />
                 </td>
                 <td className="px-3 py-3 align-top">
-                  <EntryBarrierCell impact={aiImpactBySoc.get(occ.soc)} />
+                  <EntryBarrierCell
+                    impact={aiImpactBySoc.get(occ.soc)}
+                    trend={wageTrendBySoc.get(occ.soc)}
+                  />
                 </td>
                 <td className="px-3 py-3 align-top">
                   <Link
@@ -1184,7 +1191,7 @@ function OccCard({
         </div>
         <div>
           <span className="text-muted text-xs">Entry barrier</span>
-          <EntryBarrierCell impact={impact} />
+          <EntryBarrierCell impact={impact} trend={wageTrend} />
         </div>
       </div>
     </div>
@@ -1200,8 +1207,9 @@ function CompetitionCell({
   ratio: number | null
   align?: 'start' | 'left'
 }) {
-  const color = COMPETITION_DOT[level || 'Unknown'] || COMPETITION_DOT.Unknown
-  const copy = level ? COMPETITION_COPY[level] : null
+  const resolved = competitionLevelFromRatio(ratio) ?? level
+  const color = COMPETITION_DOT[resolved || 'Unknown'] || COMPETITION_DOT.Unknown
+  const copy = resolved ? COMPETITION_COPY[resolved] : null
   return (
     <HoverTip
       maxWidth={280}
@@ -1210,7 +1218,7 @@ function CompetitionCell({
           <div className="flex items-center gap-2 mb-1.5">
             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
             <span className="text-xs font-semibold text-ink">
-              {level || 'Unknown'} Competition
+              {resolved || 'Unknown'} Competition
             </span>
           </div>
           {ratio != null && (
@@ -1229,7 +1237,7 @@ function CompetitionCell({
     >
       <div className={`flex flex-col gap-1 cursor-help ${align === 'left' ? 'items-start' : 'items-start'}`}>
         <span className="text-sm font-medium leading-none text-ink">
-          {level || '—'}
+          {resolved || '—'}
         </span>
         {ratio != null && (
           <span className="text-[11px] text-muted leading-tight">
@@ -1301,7 +1309,13 @@ function AiRiskCell({ occ, align = 'start' }: { occ: Occupation; align?: 'start'
   )
 }
 
-function EntryBarrierCell({ impact }: { impact?: AiImpactScore }) {
+function EntryBarrierCell({
+  impact,
+  trend,
+}: {
+  impact?: AiImpactScore
+  trend?: EntryWageTrend
+}) {
   if (!impact) {
     return (
       <HoverTip
@@ -1313,24 +1327,28 @@ function EntryBarrierCell({ impact }: { impact?: AiImpactScore }) {
     )
   }
 
+  const level = entryBarrierLevel(impact, trend)
   const flag = AI_FLAG_LABEL[impact.flag] ?? impact.flag
+  const color = ENTRY_BARRIER_DOT[level || 'Unknown'] || ENTRY_BARRIER_DOT.Unknown
 
   return (
     <HoverTip
       maxWidth={300}
       content={
         <div>
-          <p className="text-xs text-ink font-medium mb-1">
-            {impact.barrier} · {flag}
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+            <span className="text-xs font-semibold text-ink">{level} barrier</span>
+          </div>
+          <p className="text-xs text-ink mb-1.5">
+            AOI {impact.barrier.toLowerCase()} · {flag}
           </p>
           <p className="text-xs text-muted leading-relaxed">{ENTRY_BARRIER_COPY}</p>
         </div>
       }
     >
       <div className="flex flex-col gap-0.5 cursor-help items-start">
-        <span className="text-sm font-medium leading-none text-ink">
-          {impact.barrier}
-        </span>
+        <span className="text-sm font-medium leading-none text-ink">{level}</span>
         <span className="text-[11px] text-muted leading-tight">{flag}</span>
       </div>
     </HoverTip>
@@ -1374,7 +1392,7 @@ const COLUMN_DEFINITIONS = [
   },
   {
     term: 'Entry barrier',
-    body: 'Whether breaking in without experience is getting harder or easier, from hiring-pattern analysis by Burning Glass Institute for the American Opportunity Index.',
+    body: 'How hard the door is getting. Rising only when AOI says entry is harder and entry wages are up, or the field is shrinking. Steady is the middle. Falling is AOI’s lower-potential pattern.',
   },
 ] as const
 
@@ -1403,10 +1421,11 @@ function sortValue(
   occ: Occupation,
   field: TableSort,
   aiImpactBySoc: Map<string, AiImpactScore>,
+  wageTrendBySoc: Map<string, EntryWageTrend>,
 ): string | number | null {
   if (field === 'entryBarrier') {
-    const b = aiImpactBySoc.get(occ.soc)?.barrier
-    return b === 'Rising' ? 1 : b === 'Falling' ? 0 : null
+    const level = entryBarrierLevel(aiImpactBySoc.get(occ.soc), wageTrendBySoc.get(occ.soc))
+    return level === 'Rising' ? 2 : level === 'Steady' ? 1 : level === 'Falling' ? 0 : null
   }
   const value = occ[field]
   return typeof value === 'number' || typeof value === 'string' ? value : null

@@ -23,6 +23,7 @@ import type {
   UnobviousPathsFile,
 } from '../types'
 import { assetUrl } from '../lib/assetUrl'
+import { competitionLevelFromRatio } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
 
 interface DataContextValue {
@@ -91,7 +92,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
               name: majorDisplayName(major.name),
             })),
         )
-        setOccupations(o)
+        setOccupations(
+          o.map((occ) => ({
+            ...occ,
+            competitionLevel: competitionLevelFromRatio(occ.graduatesPerOpening),
+          })),
+        )
         setCrosswalk(c)
         setEloundouFile(e)
         setAiImpactFile(a)

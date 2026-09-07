@@ -1,4 +1,4 @@
-import type { CompetitionLevel } from '../types'
+import type { CompetitionLevel, EntryBarrierLevel } from '../types'
 
 export const COMPETITION_COPY: Record<
   CompetitionLevel,
@@ -19,15 +19,25 @@ export const COMPETITION_COPY: Record<
   High: {
     label: 'High',
     blurb:
-      "3–6 graduates per opening. You'll need to stand out: internships, skills, and networking matter a lot.",
+      "More than 3 graduates per opening. You'll need to stand out: internships, skills, and networking matter a lot.",
     color: 'var(--color-severity-high)',
   },
   'Very High': {
     label: 'Very High',
     blurb:
-      'More than 6 graduates per opening. The field is significantly oversupplied. Expect a tough job market.',
+      'The field is significantly oversupplied. Expect a tough job market.',
     color: 'var(--color-severity-max)',
   },
+}
+
+/** Grads per opening → band: Low <1, Moderate <3, High 3+. */
+export function competitionLevelFromRatio(
+  ratio: number | null | undefined,
+): CompetitionLevel | null {
+  if (ratio == null || Number.isNaN(ratio)) return null
+  if (ratio < 1) return 'Low'
+  if (ratio < 3) return 'Moderate'
+  return 'High'
 }
 
 export const AI_BAND_COPY: Record<string, string> = {
@@ -126,7 +136,27 @@ export const AI_FLAG_LABEL: Record<string, string> = {
 }
 
 export const ENTRY_BARRIER_COPY =
-  'Whether the American Opportunity Index says the door into this occupation is getting harder or easier to walk through. The line under Rising/Falling is the Gen-3 AI-impact flag (methodology 2026-04-21). A dash means the occupation has not been classified yet — not that it is untouched.'
+  'Whether the door into this occupation is getting harder or easier. Rising only when AOI says entry is harder and entry wages are actually up, or the field is shrinking. Steady is the middle: a rising bar that pay has not confirmed, or easier entry while experts pull away. Falling is AOI’s lower-potential pattern. A dash means unassessed, not untouched.'
+
+export const ENTRY_BARRIER_DOT: Record<string, string> = {
+  Falling: 'var(--color-severity-low)',
+  Steady: 'var(--color-severity-mid)',
+  Rising: 'var(--color-severity-high)',
+  Unknown: 'var(--color-severity-none)',
+}
+
+export function entryBarrierLevel(
+  impact: { flag: string; barrier: string } | null | undefined,
+  trend?: { arrow?: string } | null,
+): EntryBarrierLevel | null {
+  if (!impact) return null
+  if (impact.flag === 'Shrinking Fields') return 'Rising'
+  if (impact.flag === 'Lower Potential') return 'Falling'
+  if (impact.flag === 'Winners Pull Away') return 'Steady'
+  if (impact.flag === 'Raising the Bar' && trend?.arrow === 'up') return 'Rising'
+  if (impact.barrier === 'Falling') return 'Falling'
+  return 'Steady'
+}
 
 export const AOI_ATTRIBUTION =
   'Employer and entry-barrier data: American Opportunity Index, Schultz Family Foundation, methodology 2026-04-21'

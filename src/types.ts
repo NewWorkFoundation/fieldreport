@@ -53,6 +53,7 @@ export type SortField =
   | 'entryBarrier'
 
 export type EntryBarrier = 'Rising' | 'Falling'
+export type EntryBarrierLevel = 'Falling' | 'Steady' | 'Rising'
 
 export type AiFlag =
   | 'Raising the Bar'
