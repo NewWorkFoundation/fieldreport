@@ -104,7 +104,7 @@ export const AI_BAND_LIVE_COPY: Record<string, string> = {
 export const COMPETITION_DOT: Record<string, string> = {
   Low: 'var(--color-severity-low)',
   Moderate: 'var(--color-severity-mid)',
-  High: 'var(--color-severity-high)',
+  High: 'var(--color-severity-max)',
   'Very High': 'var(--color-severity-max)',
   Unknown: 'var(--color-severity-none)',
 }

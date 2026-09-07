@@ -2,12 +2,10 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandMark } from './BrandMark'
 import { ThemeToggle } from './ThemeToggle'
-import { LETTER_URL } from '../lib/letterUrl'
 import { useAppPaths } from '../lib/useAppPaths'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { home } = useAppPaths()
-  const letterUrl = LETTER_URL
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip bg-page text-ink antialiased">
@@ -73,14 +71,6 @@ export function Layout({ children }: { children: ReactNode }) {
                   GPTs-are-GPTs
                 </a>
                 , and AOI / WYWM employer ratings
-                {letterUrl ? (
-                  <>
-                    {' · '}
-                    <a className="text-muted hover:text-ink underline" href={letterUrl}>
-                      NEXT
-                    </a>
-                  </>
-                ) : null}
               </div>
               <div className="text-muted">© {new Date().getFullYear()} dearCC</div>
             </div>

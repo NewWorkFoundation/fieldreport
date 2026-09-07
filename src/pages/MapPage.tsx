@@ -7,7 +7,6 @@ import type { Topology, GeometryCollection } from 'topojson-specification'
 import type { FeatureCollection, Geometry } from 'geojson'
 import { useData } from '../data/DataContext'
 import { BackLink } from '../components/BackLink'
-import { DigestSignup } from '../components/DigestSignup'
 import { DocumentMeta } from '../components/DocumentMeta'
 import { InfoTip } from '../components/InfoTip'
 import { ShareSheet } from '../components/ShareSheet'
@@ -75,6 +74,10 @@ export function MapPage() {
   useEffect(() => {
     void loadStateData()
   }, [loadStateData])
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [socCode])
 
   useEffect(() => {
     let cancelled = false
@@ -168,7 +171,7 @@ export function MapPage() {
     : null
 
   if (loading) {
-    return <div className="mx-auto max-w-7xl px-4 py-20 text-muted">Loading map data...</div>
+    return <div className="mx-auto max-w-7xl px-4 py-10 text-muted">Loading map data...</div>
   }
 
   if (!occupation) {
@@ -188,55 +191,135 @@ export function MapPage() {
     'AI exposure is a 0–10 score for how much of this job LLMs can already do.'
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 py-10 sm:py-12">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-2 pb-8 sm:pt-3 sm:pb-10">
       <DocumentMeta
         title={occupation.title}
         description={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β.`}
       />
-      <BackLink to={backToResults}>{backLabel}</BackLink>
-
-      <div className="mb-6 sm:mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-wider text-muted font-mono mb-2">
-            SOC {occupation.soc}
-          </p>
-          <h1 className="font-sans text-2xl sm:text-4xl font-bold text-ink tracking-tight text-balance">
-            {occupation.title}
-          </h1>
-          <p className="text-muted mt-3 max-w-xl text-sm sm:text-base leading-relaxed">
-            Pick a state for employment and salary. Color by employment, median salary, or jobs × AI exposure.
-          </p>
-        </div>
-        <div className="shrink-0 w-full sm:w-auto sm:pt-6">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <BackLink to={backToResults} compact>
+          {backLabel}
+        </BackLink>
+        <div className="shrink-0 hidden sm:block">
           <ShareSheet
+            quiet
             title={occupation.title}
             summary={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β, from dearCC Field report.`}
           />
         </div>
       </div>
 
-      <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 mb-6 text-sm overflow-x-auto overscroll-x-contain pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-        <span className="text-muted shrink-0">Color by:</span>
-        {(
-          [
-            ['employment', 'Employment'],
-            ['salary', 'Salary'],
-            ['aiImpact', 'AI Impact'],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setColorBy(key)}
-            className={`shrink-0 rounded-lg px-3 py-2.5 sm:py-1.5 transition-colors min-h-11 sm:min-h-0 whitespace-nowrap ${
-              colorBy === key
-                ? 'bg-ink text-page'
-                : 'text-muted hover:text-ink bg-card border border-border'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <h1 className="font-sans text-xl sm:text-2xl font-bold text-ink tracking-tight text-balance min-w-0">
+          {occupation.title}
+          <span className="ml-2 align-middle font-mono text-xs font-normal uppercase tracking-wider text-muted">
+            SOC {occupation.soc}
+          </span>
+        </h1>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex flex-1 lg:flex-none flex-nowrap items-center gap-2 text-sm overflow-x-auto overscroll-x-contain scrollbar-none">
+            <span className="text-muted shrink-0">Color by:</span>
+            {(
+              [
+                ['employment', 'Employment'],
+                ['salary', 'Salary'],
+                ['aiImpact', 'AI Impact'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setColorBy(key)}
+                className={`shrink-0 rounded-lg px-3 py-2.5 sm:py-1.5 transition-colors min-h-11 sm:min-h-0 whitespace-nowrap ${
+                  colorBy === key
+                    ? 'bg-ink text-page'
+                    : 'text-muted hover:text-ink bg-card border border-border'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="shrink-0 sm:hidden">
+            <ShareSheet
+              quiet
+              title={occupation.title}
+              summary={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β, from dearCC Field report.`}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-[1fr_260px] gap-4 mb-6">
+        <div className="bg-card border border-border rounded-xl p-2 sm:p-3 overflow-hidden">
+          {!stateData || !topo ? (
+            <p className="text-muted py-16 text-center">Loading map data...</p>
+          ) : (
+            <div
+              className="mx-auto w-full"
+              style={{
+                maxWidth: 'min(100%, calc((100dvh - 15.5rem) * 960 / 560))',
+                aspectRatio: '960 / 560',
+              }}
+            >
+              <svg
+                viewBox="0 0 960 560"
+                className="h-full w-full"
+                preserveAspectRatio="xMidYMid meet"
+                role="img"
+                aria-label="US map"
+              >
+                {paths.map((p) => {
+                  const v = values[p.abbr] ?? 0
+                  const fill = v > 0 ? colorScale(v) : 'var(--color-border)'
+                  const isActive = activeAbbr === p.abbr
+                  return (
+                    <path
+                      key={p.abbr || p.name}
+                      d={p.d}
+                      fill={fill}
+                      stroke={isActive ? 'var(--color-ink)' : 'var(--color-card)'}
+                      strokeWidth={isActive ? 2 : 0.75}
+                      className="cursor-pointer transition-[stroke-width] focus:outline-none focus-visible:stroke-ink"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={p.name}
+                      onMouseEnter={() => setHover(p.abbr)}
+                      onMouseLeave={() => setHover(null)}
+                      onFocus={() => setHover(p.abbr)}
+                      onBlur={() => setHover(null)}
+                      onClick={() => setSelected(p.abbr)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelected(p.abbr)
+                        }
+                      }}
+                    >
+                      <title>{p.name}</title>
+                    </path>
+                  )
+                })}
+              </svg>
+            </div>
+          )}
+          <Legend colorBy={colorBy} values={Object.values(values).filter((v) => v > 0)} />
+        </div>
+
+        <aside
+          className={`bg-card border border-border rounded-xl p-4 sm:p-5 h-fit ${
+            active ? '' : 'hidden lg:block'
+          }`}
+        >
+          {active ? (
+            <StateDetail active={active} rankedCount={ranked.length} colorBy={colorBy} />
+          ) : (
+            <p className="text-muted text-sm leading-relaxed">
+              Click a state to see employment and salary for{' '}
+              {occupation.title.toLowerCase()}.
+            </p>
+          )}
+        </aside>
       </div>
 
       <div className="lg:hidden mb-6">
@@ -256,16 +339,6 @@ export function MapPage() {
             </option>
           ))}
         </select>
-
-        {active ? (
-          <div className="mb-3 rounded-xl border border-border bg-card p-4">
-            <StateDetail active={active} rankedCount={ranked.length} colorBy={colorBy} />
-          </div>
-        ) : (
-          <p className="mb-3 text-sm text-muted">
-            Pick a state for employment and median salary.
-          </p>
-        )}
 
         <ul className="rounded-xl border border-border bg-card divide-y divide-border max-h-[min(40dvh,14rem)] overflow-auto">
           {ranked.length === 0 ? (
@@ -303,60 +376,6 @@ export function MapPage() {
         </ul>
       </div>
 
-      <div className="hidden lg:grid lg:grid-cols-[1fr_280px] gap-6 mb-6">
-        <div className="bg-card border border-border rounded-xl p-3 sm:p-5 overflow-hidden">
-          {!stateData || !topo ? (
-            <p className="text-muted py-20 text-center">Loading map data...</p>
-          ) : (
-            <svg viewBox="0 0 960 560" className="w-full h-auto" role="img" aria-label="US map">
-              {paths.map((p) => {
-                const v = values[p.abbr] ?? 0
-                const fill = v > 0 ? colorScale(v) : 'var(--color-border)'
-                const isActive = activeAbbr === p.abbr
-                return (
-                  <path
-                    key={p.abbr || p.name}
-                    d={p.d}
-                    fill={fill}
-                    stroke={isActive ? 'var(--color-ink)' : 'var(--color-card)'}
-                    strokeWidth={isActive ? 2 : 0.75}
-                    className="cursor-pointer transition-[stroke-width] focus:outline-none focus-visible:stroke-ink"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={p.name}
-                    onMouseEnter={() => setHover(p.abbr)}
-                    onMouseLeave={() => setHover(null)}
-                    onFocus={() => setHover(p.abbr)}
-                    onBlur={() => setHover(null)}
-                    onClick={() => setSelected(p.abbr)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        setSelected(p.abbr)
-                      }
-                    }}
-                  >
-                    <title>{p.name}</title>
-                  </path>
-                )
-              })}
-            </svg>
-          )}
-          <Legend colorBy={colorBy} values={Object.values(values).filter((v) => v > 0)} />
-        </div>
-
-        <aside className="bg-card border border-border rounded-xl p-5 h-fit">
-          {active ? (
-            <StateDetail active={active} rankedCount={ranked.length} colorBy={colorBy} />
-          ) : (
-            <p className="text-muted text-sm leading-relaxed">
-              Click a state to see employment and salary for{' '}
-              {occupation.title.toLowerCase()}.
-            </p>
-          )}
-        </aside>
-      </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2.5 sm:gap-4 text-sm w-full mb-6">
         <Metric label="Entry Salary" value={formatSalary(occupation.entrySalary)} />
         <Metric label="Median Salary" value={formatSalary(occupation.medianSalary)} />
@@ -375,13 +394,6 @@ export function MapPage() {
           tip={ELOUNDOU_COPY}
         />
       </div>
-
-      <DigestSignup
-        industry="Career exploration"
-        role={occupation.title}
-        focusAreas={[occupation.title, 'AI literacy', 'labor market']}
-        sourceRef={`soc:${occupation.soc}`}
-      />
     </div>
   )
 }

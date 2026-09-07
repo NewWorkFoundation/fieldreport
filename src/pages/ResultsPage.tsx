@@ -31,7 +31,6 @@ import {
 } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
 import { newPathSocs, pathForCip, traditionalEntry } from '../lib/unobviousPaths'
-import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
 import type {
   AiImpactScore,
@@ -117,6 +116,15 @@ function MiniBar({ pct, color }: { pct: number; color: string }) {
         style={{ width: `${Math.min(100, Math.max(0, pct))}%`, backgroundColor: color }}
       />
     </div>
+  )
+}
+
+function StatusArrow({ tone }: { tone: 'up' | 'flat' | 'down' }) {
+  const mark = tone === 'up' ? '↗' : tone === 'down' ? '↘' : '→'
+  return (
+    <span className="font-mono text-[12px] leading-none opacity-80" aria-hidden>
+      {mark}
+    </span>
   )
 }
 
@@ -397,9 +405,7 @@ export function ResultsPage() {
       ) : null}
 
       <GameplanCta
-        title={displayName}
         selectedRoles={selectedRoles}
-        sourceRef={cipCode ? `report:${cipCode}` : 'report'}
         onStartSelecting={() => setSelectingJobs(true)}
       />
 
@@ -501,8 +507,12 @@ function TldrStat({ className, children }: { className: string; children: ReactN
   )
 }
 
+function joinReasons(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? ''
+  return `${parts[0]} and ${parts[1]}`
+}
+
 function TldrCard({
-  majorName,
   stats,
 }: {
   majorName: string
@@ -515,73 +525,12 @@ function TldrCard({
     avgEloundou: number | null
   }
 }) {
-  const name = majorName.replace(/,\s*general$/i, '')
   const ratio = stats.avgCompetition
   const growth = stats.avgGrowth
   const ai = stats.avgAi
   const aiLabel = `${Math.round(ai * 10) / 10}/10`
-
-  const competition =
-    ratio == null ? (
-      <>grads per opening isn't available</>
-    ) : ratio < 0.05 ? (
-      <>
-        far more openings than grads (
-        <TldrStat className="text-ink">{ratio.toFixed(2)}×</TldrStat>)
-      </>
-    ) : ratio < 1 ? (
-      <>
-        demand exceeds supply at{' '}
-        <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> grads per opening
-      </>
-    ) : ratio < 1.5 ? (
-      <>
-        roughly in balance at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat>{' '}
-        grads per opening
-      </>
-    ) : ratio < 3 ? (
-      <>
-        competitive at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> grads
-        per opening
-      </>
-    ) : (
-      <>
-        supply is tight at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat>{' '}
-        grads per opening
-      </>
-    )
-
-  const growthBit =
-    growth >= 2 ? (
-      <>
-        Projected <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
-      </>
-    ) : growth >= 0 ? (
-      <>
-        Projected roughly flat (
-        <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat>)
-      </>
-    ) : (
-      <>
-        Projected <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
-      </>
-    )
-
   const aiWord = ai <= 3 ? 'low' : ai <= 5.5 ? 'moderate' : ai <= 7.5 ? 'high' : 'very high'
-  const aiBit = (
-    <>
-      AI threat {aiWord} at <TldrStat className="text-ink">{aiLabel}</TldrStat>
-    </>
-  )
-
   const beta = stats.avgEloundou
-  const betaLabel = beta == null ? null : formatShare(beta)
-  const eloundouBit =
-    beta == null || betaLabel == null ? null : (
-      <>
-        Eloundou β <TldrStat className="text-ink">{betaLabel}</TldrStat>
-      </>
-    )
 
   const goods = [
     ratio != null && ratio < 1.5,
@@ -594,69 +543,97 @@ function TldrCard({
   ).length
   const verdict = goods >= 2 && bads === 0 ? 'Favorable' : bads >= 2 ? 'Not favorable' : 'Mixed'
 
+  const growthReason =
+    growth >= 8 ? 'strong growth' : growth >= 2 ? 'rising jobs' : growth >= 0 ? 'flat growth' : 'declining jobs'
+  const aiReason = `${aiWord} AI exposure`
+  const marketReason =
+    ratio == null
+      ? null
+      : ratio < 1
+        ? 'more openings than grads'
+        : ratio < 1.5
+          ? 'a balanced market'
+          : ratio < 3
+            ? 'a competitive market'
+            : 'too many grads per opening'
+
+  const growthKind = growth >= 2 ? 'good' : 'bad'
+  const aiKind = ai <= 4 ? 'good' : ai > 5.5 ? 'bad' : 'neutral'
+  const marketKind: 'good' | 'bad' | 'neutral' | null =
+    ratio == null ? null : ratio < 1.5 ? 'good' : ratio >= 3 ? 'bad' : 'neutral'
+
+  const reasons: { text: string; kind: 'good' | 'bad' | 'neutral' }[] = [
+    { text: growthReason, kind: growthKind },
+    { text: aiReason, kind: aiKind },
+    ...(marketReason && marketKind ? [{ text: marketReason, kind: marketKind }] : []),
+  ]
+  const whyParts =
+    verdict === 'Favorable'
+      ? reasons.filter((r) => r.kind === 'good').map((r) => r.text)
+      : verdict === 'Not favorable'
+        ? reasons.filter((r) => r.kind === 'bad').map((r) => r.text)
+        : [
+            ...reasons.filter((r) => r.kind === 'good').map((r) => r.text),
+            ...reasons.filter((r) => r.kind === 'bad').map((r) => r.text),
+          ]
+  const why = joinReasons(whyParts.slice(0, 2))
+
+  const ratioLabel = ratio == null ? null : ratio < 0.05 ? `${ratio.toFixed(2)}×` : `${ratio.toFixed(1)}×`
+
   return (
     <div className="mb-8 max-w-4xl">
       <p className="text-base sm:text-lg text-ink leading-[1.7]">
-        <strong className="font-bold">{verdict}</strong>. {growthBit}. {aiBit}
-        {eloundouBit ? <>; {eloundouBit}</> : null}. {name} grads start around{' '}
-        <TldrStat className="text-ink">{formatSalaryK(stats.avgSalary)}</TldrStat>. About{' '}
-        <TldrStat className="text-ink">{formatCompactCount(stats.totalOpenings)}</TldrStat>{' '}
-        openings a year among linked jobs; {competition}.
+        <strong className="font-bold">{verdict}</strong>
+        {why ? `: ${why}` : null}.
+      </p>
+      <p className="mt-2 text-base sm:text-lg text-ink leading-[1.8] flex flex-wrap items-baseline gap-x-2 gap-y-2">
+        <span className="whitespace-nowrap">
+          <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat>
+        </span>
+        <span className="text-muted" aria-hidden>
+          ·
+        </span>
+        <span className="whitespace-nowrap">
+          <TldrStat className="text-ink">{aiLabel}</TldrStat> AI
+        </span>
+        <span className="text-muted" aria-hidden>
+          ·
+        </span>
+        <span className="whitespace-nowrap">
+          <TldrStat className="text-ink">{formatSalaryK(stats.avgSalary)}</TldrStat> entry
+        </span>
+        <span className="text-muted" aria-hidden>
+          ·
+        </span>
+        <span className="whitespace-nowrap">
+          <TldrStat className="text-ink">{formatCompactCount(stats.totalOpenings)}</TldrStat> openings
+        </span>
+        {ratioLabel ? (
+          <>
+            <span className="text-muted" aria-hidden>
+              ·
+            </span>
+            <span className="whitespace-nowrap">
+              <TldrStat className="text-ink">{ratioLabel}</TldrStat> grads per opening
+            </span>
+          </>
+        ) : null}
       </p>
     </div>
   )
 }
 
-function EmailReportAction({
-  open,
-  onOpen,
-  idPrefix,
-  subscribe,
-  autoFocus = false,
-}: {
-  open: boolean
-  onOpen: () => void
-  idPrefix: string
-  subscribe: ReturnType<typeof useLetterSubscribe>
-  autoFocus?: boolean
-}) {
-  if (open) {
-    return <QuietEmailForm idPrefix={idPrefix} autoFocus={autoFocus} {...subscribe} />
-  }
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
-    >
-      Not yet, just email me this report
-    </button>
-  )
-}
-
 function GameplanCta({
-  title,
   selectedRoles,
-  sourceRef,
   onStartSelecting,
 }: {
-  title: string
   selectedRoles: string[]
-  sourceRef: string
   onStartSelecting: () => void
 }) {
   const count = selectedRoles.length
   const planHref = count > 0 ? gameplanHref(selectedRoles) : ''
   const inFlowRef = useRef<HTMLDivElement>(null)
   const [docked, setDocked] = useState(false)
-  const [emailOpen, setEmailOpen] = useState(false)
-  const subscribe = useLetterSubscribe({
-    industry: title,
-    role: selectedRoles[0] ?? title,
-    focusAreas: selectedRoles.length ? selectedRoles : [title],
-    sourceRef,
-    mailReport: true,
-  })
 
   useEffect(() => {
     if (count === 0) {
@@ -686,45 +663,22 @@ function GameplanCta({
         ref={inFlowRef}
         className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5"
       >
-        {emailOpen ? (
-          <>
-            {count > 0 ? <AnalyzeFitButton href={planHref} count={count} /> : null}
-            <QuietEmailForm idPrefix="cta-inline" autoFocus={!docked} {...subscribe} />
-          </>
+        {count > 0 ? (
+          <AnalyzeFitButton href={planHref} count={count} />
         ) : (
-          <>
-            {count > 0 ? (
-              <AnalyzeFitButton href={planHref} count={count} />
-            ) : (
-              <button
-                type="button"
-                onClick={onStartSelecting}
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black hover:brightness-110"
-              >
-                Select target jobs →
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setEmailOpen(true)}
-              className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
-            >
-              Not yet, just email me this report
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={onStartSelecting}
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black hover:brightness-110"
+          >
+            Select target jobs →
+          </button>
         )}
       </div>
       {count > 0 && docked ? (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-page/95 backdrop-blur-sm pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
             <AnalyzeFitButton href={planHref} count={count} />
-            <EmailReportAction
-              open={emailOpen}
-              onOpen={() => setEmailOpen(true)}
-              idPrefix="cta-dock"
-              autoFocus={docked}
-              subscribe={subscribe}
-            />
           </div>
         </div>
       ) : null}
@@ -1236,15 +1190,23 @@ function CompetitionCell({
       }
     >
       <div className={`flex flex-col gap-1 cursor-help ${align === 'left' ? 'items-start' : 'items-start'}`}>
-        <span className="text-sm font-medium leading-none text-ink">
+        <span
+          className="text-sm font-medium leading-none inline-flex items-center gap-1"
+          style={{ color: resolved ? color : undefined }}
+        >
           {resolved || '—'}
+          {resolved === 'High' ? (
+            <StatusArrow tone="up" />
+          ) : resolved === 'Low' ? (
+            <StatusArrow tone="down" />
+          ) : resolved === 'Moderate' ? (
+            <StatusArrow tone="flat" />
+          ) : null}
         </span>
-        {ratio != null && (
-          <span className="text-[11px] text-muted leading-tight">
-            {formatRatio(ratio)} grads per opening
-          </span>
-        )}
-        <MiniBar pct={competitionFill(ratio)} color={color} />
+        <span className="text-[11px] text-muted leading-tight">
+          {ratio != null ? `${formatRatio(ratio)} grads per opening` : 'no data'}
+        </span>
+        {ratio != null && <MiniBar pct={competitionFill(ratio)} color={color} />}
       </div>
     </HoverTip>
   )
@@ -1322,7 +1284,10 @@ function EntryBarrierCell({
         maxWidth={280}
         content={<p className="text-xs text-muted leading-relaxed">{ENTRY_BARRIER_COPY}</p>}
       >
-        <span className="text-muted cursor-help">—</span>
+        <span className="flex flex-col gap-0.5 cursor-help items-start">
+          <span className="text-sm font-medium leading-none text-muted">—</span>
+          <span className="text-[11px] text-muted leading-tight">no data</span>
+        </span>
       </HoverTip>
     )
   }
@@ -1348,7 +1313,19 @@ function EntryBarrierCell({
       }
     >
       <div className="flex flex-col gap-0.5 cursor-help items-start">
-        <span className="text-sm font-medium leading-none text-ink">{level}</span>
+        <span
+          className="text-sm font-medium leading-none inline-flex items-center gap-1"
+          style={{ color }}
+        >
+          {level}
+          {level === 'Rising' ? (
+            <StatusArrow tone="up" />
+          ) : level === 'Falling' ? (
+            <StatusArrow tone="down" />
+          ) : (
+            <StatusArrow tone="flat" />
+          )}
+        </span>
         <span className="text-[11px] text-muted leading-tight">{flag}</span>
       </div>
     </HoverTip>
