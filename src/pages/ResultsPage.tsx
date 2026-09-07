@@ -7,8 +7,8 @@ import { MajorSearch } from '../components/MajorSearch'
 import { WageSparkline } from '../components/WageSparkline'
 import {
   formatCompactCount,
-  formatGrowth,
   formatNumber,
+  formatSignedCompactCount,
   formatRatio,
   formatSalary,
   formatSalaryK,
@@ -100,6 +100,22 @@ const COLUMNS: {
 ]
 
 const GAMEPLAN_URL = 'https://gameplan.dearcc.org/'
+
+/** Favorable if linked jobs add at least this many positions by 2034. */
+const JOBS_FAVORABLE_MIN = 10_000
+const JOBS_STRONG_MIN = 100_000
+
+/** Absolute 2024–34 job change: employment × projected growth rate. */
+function projectedJobsIncrease(occupations: Occupation[]): number {
+  let jobs = 0
+  for (const occ of occupations) {
+    const rate = occ.projectedGrowthRate
+    const weight = occ.totalEmployment
+    if (rate == null || Number.isNaN(rate) || !weight) continue
+    jobs += weight * (rate / 100)
+  }
+  return jobs
+}
 
 function gameplanHref(roles: readonly string[]): string {
   const list = roles.map((r) => r.trim()).filter(Boolean)
@@ -275,11 +291,7 @@ export function ResultsPage() {
     if (!relevant.length) return null
     const avgSalary = relevant.reduce((s, o) => s + o.entrySalary, 0) / relevant.length
     const totalOpenings = relevant.reduce((s, o) => s + o.openPositions, 0)
-    const growthVals = relevant
-      .map((o) => o.projectedGrowthRate)
-      .filter((v): v is number => v != null && !Number.isNaN(v))
-    const avgGrowth =
-      growthVals.length > 0 ? growthVals.reduce((s, v) => s + v, 0) / growthVals.length : 0
+    const jobsIncrease = projectedJobsIncrease(relevant)
     const aiVals = relevant
       .map((o) => o.karpathyExposure)
       .filter((v): v is number => v != null && !Number.isNaN(v))
@@ -298,7 +310,7 @@ export function ResultsPage() {
       eloundouVals.length > 0
         ? eloundouVals.reduce((s, v) => s + v, 0) / eloundouVals.length
         : null
-    return { avgSalary, totalOpenings, avgGrowth, avgAi, avgCompetition, avgEloundou }
+    return { avgSalary, totalOpenings, jobsIncrease, avgAi, avgCompetition, avgEloundou }
   }, [relevant, eloundouBySoc])
 
   function onSort(field: TableSort) {
@@ -364,8 +376,8 @@ export function ResultsPage() {
               <MetricCard
                 label="Projected openings"
                 value={formatCompactCount(stats.totalOpenings)}
-                mark={stats.avgGrowth > 0 ? '▲' : stats.avgGrowth < 0 ? '▼' : undefined}
-                sublabel={`per year · employment ${formatGrowth(stats.avgGrowth)} by 2034`}
+                mark={stats.jobsIncrease > 0 ? '▲' : stats.jobsIncrease < 0 ? '▼' : undefined}
+                sublabel={`per year · ${formatSignedCompactCount(stats.jobsIncrease)} jobs by 2034`}
               />
               <MetricCard
                 label="Entry salary"
@@ -510,11 +522,6 @@ function TldrStat({ className, children }: { className: string; children: ReactN
   )
 }
 
-function joinReasons(parts: string[]): string {
-  if (parts.length <= 1) return parts[0] ?? ''
-  return `${parts[0]} and ${parts[1]}`
-}
-
 function TldrCard({
   stats,
 }: {
@@ -522,64 +529,26 @@ function TldrCard({
   stats: {
     avgSalary: number
     totalOpenings: number
-    avgGrowth: number
+    jobsIncrease: number
     avgAi: number
     avgCompetition: number | null
-    avgEloundou: number | null
   }
 }) {
+  const jobs = stats.jobsIncrease
   const ratio = stats.avgCompetition
-  const growth = stats.avgGrowth
   const ai = stats.avgAi
   const aiLabel = `${Math.round(ai * 10) / 10}/10`
-  const aiWord = ai <= 3 ? 'low' : ai <= 5.5 ? 'moderate' : ai <= 7.5 ? 'high' : 'very high'
-  const beta = stats.avgEloundou
 
-  const goods = [
-    ratio != null && ratio < 1.5,
-    growth >= 2,
-    ai <= 4,
-    beta != null && beta < 0.25,
-  ].filter(Boolean).length
-  const bads = [ratio != null && ratio >= 3, growth < 0, ai > 7, beta != null && beta >= 0.65].filter(
-    Boolean,
-  ).length
-  const verdict = goods >= 2 && bads === 0 ? 'Favorable' : bads >= 2 ? 'Not favorable' : 'Mixed'
-
-  const growthReason =
-    growth >= 8 ? 'strong growth' : growth >= 2 ? 'rising jobs' : growth >= 0 ? 'flat growth' : 'declining jobs'
-  const aiReason = `${aiWord} AI exposure`
-  const marketReason =
-    ratio == null
-      ? null
-      : ratio < 1
-        ? 'more openings than grads'
-        : ratio < 1.5
-          ? 'a balanced market'
-          : ratio < 3
-            ? 'a competitive market'
-            : 'too many grads per opening'
-
-  const growthKind = growth >= 2 ? 'good' : 'bad'
-  const aiKind = ai <= 4 ? 'good' : ai > 5.5 ? 'bad' : 'neutral'
-  const marketKind: 'good' | 'bad' | 'neutral' | null =
-    ratio == null ? null : ratio < 1.5 ? 'good' : ratio >= 3 ? 'bad' : 'neutral'
-
-  const reasons: { text: string; kind: 'good' | 'bad' | 'neutral' }[] = [
-    { text: growthReason, kind: growthKind },
-    { text: aiReason, kind: aiKind },
-    ...(marketReason && marketKind ? [{ text: marketReason, kind: marketKind }] : []),
-  ]
-  const whyParts =
-    verdict === 'Favorable'
-      ? reasons.filter((r) => r.kind === 'good').map((r) => r.text)
-      : verdict === 'Not favorable'
-        ? reasons.filter((r) => r.kind === 'bad').map((r) => r.text)
-        : [
-            ...reasons.filter((r) => r.kind === 'good').map((r) => r.text),
-            ...reasons.filter((r) => r.kind === 'bad').map((r) => r.text),
-          ]
-  const why = joinReasons(whyParts.slice(0, 2))
+  const verdict =
+    jobs < 0 ? 'Not favorable' : jobs >= JOBS_FAVORABLE_MIN ? 'Favorable' : 'Mixed'
+  const why =
+    jobs >= JOBS_STRONG_MIN
+      ? 'strong job growth'
+      : jobs >= JOBS_FAVORABLE_MIN
+        ? 'rising jobs'
+        : jobs >= 0
+          ? 'little job growth'
+          : 'declining jobs'
 
   const ratioLabel = ratio == null ? null : ratio < 0.05 ? `${ratio.toFixed(2)}×` : `${ratio.toFixed(1)}×`
 
@@ -591,7 +560,7 @@ function TldrCard({
       </p>
       <p className="mt-2 text-base sm:text-lg text-ink leading-[1.8] flex flex-wrap items-baseline gap-x-2 gap-y-2">
         <span className="whitespace-nowrap">
-          <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat>
+          <TldrStat className="text-ink">{formatSignedCompactCount(jobs)}</TldrStat> jobs
         </span>
         <span className="text-muted" aria-hidden>
           ·

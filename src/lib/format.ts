@@ -45,6 +45,15 @@ export function formatCompactCount(value: number | null | undefined): string {
   return formatNumber(value)
 }
 
+/** Signed compact count for projected job change: +297K / -17.2K */
+export function formatSignedCompactCount(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return '—'
+  const core = formatCompactCount(Math.abs(value))
+  if (value > 0) return `+${core}`
+  if (value < 0) return `-${core}`
+  return core
+}
+
 /** Signed percent for BLS projected growth: +1.4% / -0.3%. */
 export function formatGrowth(value: number | null | undefined, digits = 1): string {
   if (value == null || Number.isNaN(value)) return '—'
