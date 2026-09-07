@@ -31,6 +31,7 @@ import {
 } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
 import { newPathSocs, pathForCip, traditionalEntry } from '../lib/unobviousPaths'
+import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
 import type {
   AiImpactScore,
@@ -405,7 +406,9 @@ export function ResultsPage() {
       ) : null}
 
       <GameplanCta
+        title={displayName}
         selectedRoles={selectedRoles}
+        sourceRef={cipCode ? `report:${cipCode}` : 'report'}
         onStartSelecting={() => setSelectingJobs(true)}
       />
 
@@ -623,17 +626,56 @@ function TldrCard({
   )
 }
 
+function EmailReportAction({
+  open,
+  onOpen,
+  idPrefix,
+  subscribe,
+  autoFocus = false,
+}: {
+  open: boolean
+  onOpen: () => void
+  idPrefix: string
+  subscribe: ReturnType<typeof useLetterSubscribe>
+  autoFocus?: boolean
+}) {
+  if (open) {
+    return <QuietEmailForm idPrefix={idPrefix} autoFocus={autoFocus} {...subscribe} />
+  }
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
+    >
+      Not yet, just email me this report
+    </button>
+  )
+}
+
 function GameplanCta({
+  title,
   selectedRoles,
+  sourceRef,
   onStartSelecting,
 }: {
+  title: string
   selectedRoles: string[]
+  sourceRef: string
   onStartSelecting: () => void
 }) {
   const count = selectedRoles.length
   const planHref = count > 0 ? gameplanHref(selectedRoles) : ''
   const inFlowRef = useRef<HTMLDivElement>(null)
   const [docked, setDocked] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const subscribe = useLetterSubscribe({
+    industry: title,
+    role: selectedRoles[0] ?? title,
+    focusAreas: selectedRoles.length ? selectedRoles : [title],
+    sourceRef,
+    includeReport: true,
+  })
 
   useEffect(() => {
     if (count === 0) {
@@ -663,22 +705,45 @@ function GameplanCta({
         ref={inFlowRef}
         className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5"
       >
-        {count > 0 ? (
-          <AnalyzeFitButton href={planHref} count={count} />
+        {emailOpen ? (
+          <>
+            {count > 0 ? <AnalyzeFitButton href={planHref} count={count} /> : null}
+            <QuietEmailForm idPrefix="cta-inline" autoFocus={!docked} {...subscribe} />
+          </>
         ) : (
-          <button
-            type="button"
-            onClick={onStartSelecting}
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black hover:brightness-110"
-          >
-            Select target jobs →
-          </button>
+          <>
+            {count > 0 ? (
+              <AnalyzeFitButton href={planHref} count={count} />
+            ) : (
+              <button
+                type="button"
+                onClick={onStartSelecting}
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black hover:brightness-110"
+              >
+                Select target jobs →
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEmailOpen(true)}
+              className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
+            >
+              Not yet, just email me this report
+            </button>
+          </>
         )}
       </div>
       {count > 0 && docked ? (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-page/95 backdrop-blur-sm pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
             <AnalyzeFitButton href={planHref} count={count} />
+            <EmailReportAction
+              open={emailOpen}
+              onOpen={() => setEmailOpen(true)}
+              idPrefix="cta-dock"
+              autoFocus={docked}
+              subscribe={subscribe}
+            />
           </div>
         </div>
       ) : null}
