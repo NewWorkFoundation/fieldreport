@@ -17,6 +17,7 @@ export interface Occupation {
   karpathyRationale: string | null
   description?: string
   projectedGrowthRate?: number | null
+  yoyEmploymentChange?: number | null
   aiDisruptionScore?: number | null
   aiDisruptionLabel?: string | null
   indeedPostingsIndex?: number | null

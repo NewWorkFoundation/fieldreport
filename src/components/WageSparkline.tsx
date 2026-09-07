@@ -1,4 +1,9 @@
-import { formatGrowth, formatSalary } from '../lib/format'
+import {
+  formatGrowth,
+  formatNumber,
+  formatSalary,
+  formatSignedCompactCount,
+} from '../lib/format'
 import type { EntryWageTrend } from '../types'
 import { HoverTip } from './HoverTip'
 
@@ -45,6 +50,54 @@ function SparkSvg({ trend }: { trend: EntryWageTrend }) {
       <circle cx={x0} cy={y0} r={R} fill={color} />
       <circle cx={x1} cy={y1} r={R} fill={color} />
     </svg>
+  )
+}
+
+export function JobsArrow({
+  now,
+  later,
+}: {
+  now: number
+  later: number
+}) {
+  if (!(now > 0) && !(later > 0)) return null
+  const chg = now > 0 ? (later - now) / now : 0
+  const arrow: 'up' | 'down' | 'flat' = chg > 0.015 ? 'up' : chg < -0.015 ? 'down' : 'flat'
+  const color = COLOR[arrow]
+  const mark = arrow === 'up' ? '↗' : arrow === 'down' ? '↘' : '→'
+  const delta = later - now
+  const label =
+    arrow === 'up'
+      ? 'Linked employment is projected to rise'
+      : arrow === 'down'
+        ? 'Linked employment is projected to fall'
+        : 'Linked employment is projected to stay roughly flat'
+
+  return (
+    <HoverTip
+      maxWidth={260}
+      content={
+        <div>
+          <p className="text-xs font-medium text-ink mb-1">{label}</p>
+          <p className="text-xs text-ink font-mono tabular-nums">
+            {formatNumber(Math.round(now))} → {formatNumber(Math.round(later))}
+          </p>
+          <p className="text-xs text-muted mt-1.5 leading-relaxed">
+            {formatSignedCompactCount(delta)} jobs by 2034. BLS employment × projected growth,
+            summed across linked occupations.
+          </p>
+        </div>
+      }
+    >
+      <span
+        role="img"
+        aria-label={`${label}. ${formatNumber(Math.round(now))} to ${formatNumber(Math.round(later))} by 2034, ${formatSignedCompactCount(delta)} jobs.`}
+        className="inline-flex shrink-0 cursor-help text-3xl sm:text-4xl leading-none font-medium"
+        style={{ color }}
+      >
+        {mark}
+      </span>
+    </HoverTip>
   )
 }
 

@@ -10,8 +10,8 @@ import { BackLink } from '../components/BackLink'
 import { DocumentMeta } from '../components/DocumentMeta'
 import { InfoTip } from '../components/InfoTip'
 import { ShareSheet } from '../components/ShareSheet'
-import { formatNumber, formatSalary, formatShare } from '../lib/format'
-import { AI_BAND_COPY, ELOUNDOU_COPY, aiBandFromScore } from '../lib/labels'
+import { formatNumber, formatSalary } from '../lib/format'
+import { AI_BAND_COPY, aiBandFromScore } from '../lib/labels'
 import { assetUrl } from '../lib/assetUrl'
 import { isRealMajor } from '../lib/majorName'
 import { useAppPaths } from '../lib/useAppPaths'
@@ -52,7 +52,7 @@ const NAME_TO_ABBR: Record<string, string> = {
 export function MapPage() {
   const { socCode = '' } = useParams()
   const [searchParams] = useSearchParams()
-  const { majors, occupationsBySoc, eloundouBySoc, stateData, loading, loadStateData } =
+  const { majors, occupationsBySoc, stateData, loading, loadStateData } =
     useData()
   const { home, resultsBase } = useAppPaths()
   const { isDark } = useTheme()
@@ -69,7 +69,6 @@ export function MapPage() {
     ? `← Back to ${fromMajor.name}`
     : '← Back to search'
   const occupation = occupationsBySoc.get(socCode)
-  const eloundou = eloundouBySoc.get(socCode)
 
   useEffect(() => {
     void loadStateData()
@@ -194,7 +193,7 @@ export function MapPage() {
     <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-2 pb-8 sm:pt-3 sm:pb-10">
       <DocumentMeta
         title={occupation.title}
-        description={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β.`}
+        description={`State map for ${occupation.title} with BLS wages and AI exposure.`}
       />
       <div className="mb-2 flex items-center justify-between gap-3">
         <BackLink to={backToResults} compact>
@@ -204,7 +203,7 @@ export function MapPage() {
           <ShareSheet
             quiet
             title={occupation.title}
-            summary={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β, from dearCC Field report.`}
+            summary={`State map for ${occupation.title} with BLS wages and AI exposure, from dearCC Field report.`}
           />
         </div>
       </div>
@@ -244,7 +243,7 @@ export function MapPage() {
             <ShareSheet
               quiet
               title={occupation.title}
-              summary={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β, from dearCC Field report.`}
+              summary={`State map for ${occupation.title} with BLS wages and AI exposure, from dearCC Field report.`}
             />
           </div>
         </div>
@@ -388,11 +387,6 @@ export function MapPage() {
           }
           tip={aiTip}
         />
-        <Metric
-          label="Eloundou β"
-          value={eloundou?.gptBeta != null ? formatShare(eloundou.gptBeta) : '—'}
-          tip={ELOUNDOU_COPY}
-        />
       </div>
     </div>
   )
@@ -458,17 +452,7 @@ function Metric({
   return (
     <div className="bg-card border border-border rounded-xl px-3 sm:px-4 py-3 min-w-0 sm:min-w-[120px] flex-1 sm:flex-none">
       <div className="text-xs text-muted uppercase tracking-wider leading-snug inline-flex items-center min-w-0 max-w-full">
-        <span className="truncate">
-          {label.includes('β') ? (
-            <>
-              {label.split('β')[0]}
-              <span className="normal-case">β</span>
-              {label.split('β').slice(1).join('β')}
-            </>
-          ) : (
-            label
-          )}
-        </span>
+        <span className="truncate">{label}</span>
         {tip && <InfoTip label={label}>{tip}</InfoTip>}
       </div>
       <div className="font-mono text-ink mt-1 text-sm sm:text-base tabular-nums break-words">

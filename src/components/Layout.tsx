@@ -1,11 +1,15 @@
 import { type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { BrandMark } from './BrandMark'
 import { ThemeToggle } from './ThemeToggle'
 import { useAppPaths } from '../lib/useAppPaths'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { home } = useAppPaths()
+  const { pathname } = useLocation()
+  if (pathname === '/graphic' || pathname.endsWith('/graphic')) {
+    return <>{children}</>
+  }
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip bg-page text-ink antialiased">
@@ -61,15 +65,6 @@ export function Layout({ children }: { children: ReactNode }) {
                 >
                   O*NET
                 </a>
-                ,{' '}
-                <a
-                  href="https://github.com/openai/GPTs-are-GPTs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted hover:text-ink underline"
-                >
-                  GPTs-are-GPTs
-                </a>
                 , and AOI / WYWM employer ratings
               </div>
               <div className="text-muted">© {new Date().getFullYear()} dearCC</div>
@@ -77,8 +72,8 @@ export function Layout({ children }: { children: ReactNode }) {
             <div className="text-center sm:text-left text-muted/80">
               Salaries &amp; openings: BLS OEWS May 2024. Growth: 10-year BLS projections
               (2024–2034). Competition: IPEDS 2023 completions ÷ annual openings. AI exposure:
-              Frey &amp; Osborne (2013) + Karpathy/BLS OOH (2025). Eloundou β: Eloundou et al.
-              (2023) / OpenAI GPTs-are-GPTs. Employer layer: American Opportunity Index / WYWM.
+              Frey &amp; Osborne (2013) + Karpathy/BLS OOH (2025). Employer layer: American
+              Opportunity Index / WYWM.
             </div>
           </div>
         </div>

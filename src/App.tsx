@@ -1,8 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { DataProvider } from './data/DataContext'
 import { Layout } from './components/Layout'
+import { V2SignupGate } from './components/V2SignupGate'
+import { V3SignupGate } from './components/V3SignupGate'
 import { ThemeProvider } from './lib/theme'
 import { HomePage } from './pages/HomePage'
+import { DeadFieldGraphic } from './pages/DeadFieldGraphic'
 import { ResultsPage } from './pages/ResultsPage'
 import { MapPage } from './pages/MapPage'
 import {
@@ -24,12 +27,6 @@ import {
 
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
 
-function RedirectV3Results() {
-  const { cipCode = '', zip } = useParams()
-  if (zip) return <Navigate to={`/results/${cipCode}/${zip}`} replace />
-  return <Navigate to={`/results/${cipCode}`} replace />
-}
-
 function V4AtlasRedirect() {
   const { cipCode = '' } = useParams()
   return <Navigate to={`/v4/map/${cipCode}`} replace />
@@ -43,6 +40,7 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/graphic" element={<DeadFieldGraphic />} />
               <Route path="/receipts" element={<V3ReceiptsPage />} />
               <Route path="/results/:cipCode" element={<ResultsPage />} />
               <Route
@@ -81,34 +79,63 @@ export default function App() {
                 element={<V4IndustriesPage />}
               />
 
-              {/* /v2 aliases keep old links working */}
+              {/* /v2 is the current product with a free signup gate before results */}
               <Route path="/v2" element={<HomePage />} />
               <Route path="/v2/receipts" element={<V3ReceiptsPage />} />
-              <Route path="/v2/results/:cipCode" element={<ResultsPage />} />
+              <Route
+                path="/v2/results/:cipCode"
+                element={
+                  <V2SignupGate>
+                    <ResultsPage />
+                  </V2SignupGate>
+                }
+              />
               <Route
                 path="/v2/results/:cipCode/place"
-                element={<V3ZipPromptPage />}
+                element={
+                  <V2SignupGate>
+                    <V3ZipPromptPage />
+                  </V2SignupGate>
+                }
               />
               <Route
                 path="/v2/results/:cipCode/:zip"
-                element={<V3ResultsPage />}
+                element={
+                  <V2SignupGate>
+                    <V3ResultsPage />
+                  </V2SignupGate>
+                }
               />
               <Route path="/v2/map/:socCode" element={<MapPage />} />
 
-              {/* Legacy /v3 → main */}
-              <Route path="/v3" element={<Navigate to="/" replace />} />
+              {/* /v3 is the current product with a signup modal over blurred results */}
+              <Route path="/v3" element={<HomePage />} />
+              <Route path="/v3/receipts" element={<V3ReceiptsPage />} />
               <Route
-                path="/v3/receipts"
-                element={<Navigate to="/receipts" replace />}
+                path="/v3/results/:cipCode"
+                element={
+                  <V3SignupGate>
+                    <ResultsPage />
+                  </V3SignupGate>
+                }
+              />
+              <Route
+                path="/v3/results/:cipCode/place"
+                element={
+                  <V3SignupGate>
+                    <V3ZipPromptPage />
+                  </V3SignupGate>
+                }
               />
               <Route
                 path="/v3/results/:cipCode/:zip"
-                element={<RedirectV3Results />}
+                element={
+                  <V3SignupGate>
+                    <V3ResultsPage />
+                  </V3SignupGate>
+                }
               />
-              <Route
-                path="/v3/results/:cipCode"
-                element={<RedirectV3Results />}
-              />
+              <Route path="/v3/map/:socCode" element={<MapPage />} />
             </Routes>
           </Layout>
         </ThemeProvider>

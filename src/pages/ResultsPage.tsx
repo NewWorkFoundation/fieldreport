@@ -4,7 +4,7 @@ import { useData } from '../data/DataContext'
 import { DocumentMeta } from '../components/DocumentMeta'
 import { HoverTip } from '../components/HoverTip'
 import { MajorSearch } from '../components/MajorSearch'
-import { WageSparkline } from '../components/WageSparkline'
+import { JobsArrow, WageSparkline } from '../components/WageSparkline'
 import {
   formatCompactCount,
   formatNumber,
@@ -12,7 +12,6 @@ import {
   formatRatio,
   formatSalary,
   formatSalaryK,
-  formatShare,
   sentenceCase,
 } from '../lib/format'
 import {
@@ -30,7 +29,7 @@ import {
   aiBandLive,
 } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
-import { newPathSocs, pathForCip, traditionalEntry } from '../lib/unobviousPaths'
+import { newPathSocs, pathForCip } from '../lib/unobviousPaths'
 import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
 import type {
@@ -39,7 +38,7 @@ import type {
   Occupation,
   SortDirection,
   SortField,
-  UnobviousPath,
+  UnobviousJob,
 } from '../types'
 
 type TableSort = Extract<
@@ -77,7 +76,7 @@ const COLUMNS: {
     field: 'openPositions',
     label: 'Openings',
     className: 'text-right',
-    why: 'Annual job openings from BLS — includes both new positions and replacements for workers who retire or change careers. The sparkline is the inflation-adjusted entry wage from 2021 to 2025.',
+    why: 'Annual job openings from BLS — includes both new positions and replacements for workers who retire or change careers. Default sort puts accelerating employment ahead of declining, then BLS projected growth (2024–2034), then opening count. The sparkline is the inflation-adjusted entry wage from 2021 to 2025.',
   },
   {
     field: 'graduatesPerOpening',
@@ -100,6 +99,8 @@ const COLUMNS: {
 ]
 
 const GAMEPLAN_URL = 'https://gameplan.dearcc.org/'
+const TOO_NEW_TO_CALCULATE = 'Too new to calculate'
+const METRIC_COL_COUNT = 5
 
 /** Favorable if linked jobs add at least this many positions by 2034. */
 const JOBS_FAVORABLE_MIN = 10_000
@@ -157,7 +158,6 @@ export function ResultsPage() {
     occupations,
     occupationsBySoc,
     crosswalk,
-    eloundouBySoc,
     aiImpactBySoc,
     wageTrendBySoc,
     unobviousByCip,
@@ -168,14 +168,14 @@ export function ResultsPage() {
   const { home, mapBase, resultsBase } = useAppPaths()
 
   const [showAll, setShowAll] = useState(false)
-  const [sortField, setSortField] = useState<TableSort>('entrySalary')
+  const [sortField, setSortField] = useState<TableSort>('openPositions')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedSocs, setSelectedSocs] = useState<Set<string>>(() => new Set())
   const [selectingJobs, setSelectingJobs] = useState(false)
 
   useEffect(() => {
     setShowAll(false)
-    setSortField('entrySalary')
+    setSortField('openPositions')
     setSortDirection('desc')
     setSelectedSocs(new Set())
     setSelectingJobs(false)
@@ -190,16 +190,6 @@ export function ResultsPage() {
     () => pathForCip(cipCode, unobviousByCip4, unobviousByCip2, unobviousByCip),
     [cipCode, unobviousByCip, unobviousByCip4, unobviousByCip2],
   )
-  const traditional = useMemo(() => {
-    if (!newPath) return undefined
-    return traditionalEntry(
-      newPath,
-      cipCode,
-      major?.name,
-      crosswalk,
-      occupationsBySoc,
-    )
-  }, [newPath, cipCode, major, crosswalk, occupationsBySoc])
   const altSocs = useMemo(() => newPathSocs(newPath), [newPath])
   const altOccs = useMemo(() => {
     const list: Occupation[] = []
@@ -214,6 +204,20 @@ export function ResultsPage() {
     }
     return list
   }, [newPath, occupationsBySoc])
+  const whyBySoc = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const job of newPath?.jobs ?? []) {
+      if (job.soc) map.set(job.soc, job.why)
+    }
+    return map
+  }, [newPath])
+  const orphanJobs = useMemo(
+    () =>
+      (newPath?.jobs ?? []).filter(
+        (job) => !job.soc || !occupationsBySoc.has(job.soc),
+      ),
+    [newPath, occupationsBySoc],
+  )
 
   const { relevant, other } = useMemo(() => {
     const entry = crosswalk[cipCode]
@@ -221,18 +225,13 @@ export function ResultsPage() {
       return { relevant: [] as Occupation[], other: occupations }
     }
     const linked = new Set([...entry.primary, ...entry.related])
-    const primary = new Set(entry.primary)
     const rel: Occupation[] = []
     const rest: Occupation[] = []
     for (const occ of occupations) {
       if (linked.has(occ.soc)) rel.push(occ)
       else rest.push(occ)
     }
-    rel.sort((a, b) => {
-      const ap = primary.has(a.soc) ? 0 : 1
-      const bp = primary.has(b.soc) ? 0 : 1
-      return ap === bp ? b.entrySalary - a.entrySalary : ap - bp
-    })
+    rel.sort((a, b) => compareOpeningsRising(a, b, 'desc'))
     return { relevant: rel, other: rest }
   }, [occupations, cipCode, crosswalk])
 
@@ -245,9 +244,11 @@ export function ResultsPage() {
   const sorted = useMemo(() => {
     const list = [...visible]
     list.sort((a, b) => {
-      const ap = altSocs.has(a.soc) ? 0 : 1
-      const bp = altSocs.has(b.soc) ? 0 : 1
-      if (ap !== bp) return ap - bp
+      if (sortField === 'openPositions') {
+        const rising = compareOpeningsRising(a, b, sortDirection)
+        if (rising !== 0) return rising
+        return Number(altSocs.has(b.soc)) - Number(altSocs.has(a.soc))
+      }
       const av = sortValue(a, sortField, aiImpactBySoc, wageTrendBySoc)
       const bv = sortValue(b, sortField, aiImpactBySoc, wageTrendBySoc)
       if (typeof av === 'string' && typeof bv === 'string') {
@@ -255,7 +256,8 @@ export function ResultsPage() {
       }
       const an = typeof av === 'number' ? av : Number.NEGATIVE_INFINITY
       const bn = typeof bv === 'number' ? bv : Number.NEGATIVE_INFINITY
-      return sortDirection === 'asc' ? an - bn : bn - an
+      if (an !== bn) return sortDirection === 'asc' ? an - bn : bn - an
+      return 0
     })
     return list
   }, [visible, sortField, sortDirection, aiImpactBySoc, wageTrendBySoc, altSocs])
@@ -292,6 +294,7 @@ export function ResultsPage() {
     const avgSalary = relevant.reduce((s, o) => s + o.entrySalary, 0) / relevant.length
     const totalOpenings = relevant.reduce((s, o) => s + o.openPositions, 0)
     const jobsIncrease = projectedJobsIncrease(relevant)
+    const employmentNow = relevant.reduce((s, o) => s + (o.totalEmployment || 0), 0)
     const aiVals = relevant
       .map((o) => o.karpathyExposure)
       .filter((v): v is number => v != null && !Number.isNaN(v))
@@ -303,15 +306,8 @@ export function ResultsPage() {
         ? withComp.reduce((s, o) => s + (o.graduatesPerOpening || 0) * o.openPositions, 0) /
           weight
         : null
-    const eloundouVals = relevant
-      .map((o) => eloundouBySoc.get(o.soc)?.gptBeta)
-      .filter((v): v is number => v != null && !Number.isNaN(v))
-    const avgEloundou =
-      eloundouVals.length > 0
-        ? eloundouVals.reduce((s, v) => s + v, 0) / eloundouVals.length
-        : null
-    return { avgSalary, totalOpenings, jobsIncrease, avgAi, avgCompetition, avgEloundou }
-  }, [relevant, eloundouBySoc])
+    return { avgSalary, totalOpenings, jobsIncrease, employmentNow, avgAi, avgCompetition }
+  }, [relevant])
 
   function onSort(field: TableSort) {
     if (field === sortField) {
@@ -337,7 +333,7 @@ export function ResultsPage() {
     <div className={selectedRoles.length > 0 ? 'pb-28' : ''}>
       <DocumentMeta
         title={displayName}
-        description={`BLS salaries, openings, AI-exposure, and Eloundou β (LLM task exposure) for careers linked to ${displayName}.`}
+        description={`BLS salaries, openings, and AI exposure for careers linked to ${displayName}.`}
       />
 
       <section className="results-hero">
@@ -372,12 +368,17 @@ export function ResultsPage() {
           {stats && <TldrCard majorName={displayName} stats={stats} />}
 
           {stats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <MetricCard
                 label="Projected openings"
                 value={formatCompactCount(stats.totalOpenings)}
-                mark={stats.jobsIncrease > 0 ? '▲' : stats.jobsIncrease < 0 ? '▼' : undefined}
                 sublabel={`per year · ${formatSignedCompactCount(stats.jobsIncrease)} jobs by 2034`}
+                spark={
+                  <JobsArrow
+                    now={stats.employmentNow}
+                    later={stats.employmentNow + stats.jobsIncrease}
+                  />
+                }
               />
               <MetricCard
                 label="Entry salary"
@@ -392,31 +393,12 @@ export function ResultsPage() {
                 }
                 sublabel="grads per opening, weighted"
               />
-              <MetricCard
-                label="Eloundou β"
-                value={stats.avgEloundou == null ? '—' : formatShare(stats.avgEloundou)}
-                sublabel="LLM task exposure, GPT-4"
-              />
             </div>
           )}
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {newPath ? (
-        <NewPathStrip
-          path={newPath}
-          traditional={traditional ?? newPath.not}
-          majorName={displayName}
-          occupationsBySoc={occupationsBySoc}
-          selectedSocs={selectedSocs}
-          onToggleSoc={(soc) => {
-            setSelectingJobs(true)
-            toggleSoc(soc)
-          }}
-        />
-      ) : null}
-
       <GameplanCta
         title={displayName}
         selectedRoles={selectedRoles}
@@ -428,6 +410,8 @@ export function ResultsPage() {
         occupations={sorted}
         relevantSocs={new Set(relevant.map((o) => o.soc))}
         newPathSocs={altSocs}
+        whyBySoc={whyBySoc}
+        orphanJobs={orphanJobs}
         mapBase={mapBase}
         mapFrom={mapFrom}
         sortField={sortField}
@@ -490,35 +474,36 @@ function MetricCard({
   value,
   sublabel,
   mark,
+  spark,
 }: {
   label: string
   value: string
   sublabel?: string
   mark?: string
+  spark?: ReactNode
 }) {
   return (
     <div className="border border-border rounded-lg p-3 sm:p-5 min-w-0">
       <div className="text-[10px] sm:text-xs text-muted font-medium uppercase tracking-wider mb-1.5 sm:mb-2 leading-tight">
         <KeepBeta>{label}</KeepBeta>
       </div>
-      <div className="flex items-baseline gap-1.5">
-        <div className="text-xl sm:text-3xl font-bold font-mono tabular-nums text-ink">{value}</div>
-        {mark ? (
-          <span className="text-sm text-muted font-mono" aria-hidden>
-            {mark}
-          </span>
-        ) : null}
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-baseline gap-1.5">
+            <div className="text-xl sm:text-3xl font-bold font-mono tabular-nums text-ink">{value}</div>
+            {mark ? (
+              <span className="text-sm text-muted font-mono" aria-hidden>
+                {mark}
+              </span>
+            ) : null}
+          </div>
+          {sublabel && (
+            <div className="text-[11px] sm:text-xs text-muted mt-1 leading-snug">{sublabel}</div>
+          )}
+        </div>
+        {spark}
       </div>
-      {sublabel && <div className="text-[11px] sm:text-xs text-muted mt-1 leading-snug">{sublabel}</div>}
     </div>
-  )
-}
-
-function TldrStat({ className, children }: { className: string; children: ReactNode }) {
-  return (
-    <strong className={`font-bold text-[1.4em] leading-none sm:whitespace-nowrap ${className}`}>
-      {children}
-    </strong>
   )
 }
 
@@ -527,69 +512,44 @@ function TldrCard({
 }: {
   majorName: string
   stats: {
-    avgSalary: number
-    totalOpenings: number
     jobsIncrease: number
     avgAi: number
-    avgCompetition: number | null
   }
 }) {
   const jobs = stats.jobsIncrease
-  const ratio = stats.avgCompetition
   const ai = stats.avgAi
-  const aiLabel = `${Math.round(ai * 10) / 10}/10`
+  const aiWord = ai <= 3 ? 'low' : ai <= 5.5 ? 'moderate' : ai <= 7.5 ? 'high' : 'very high'
 
   const verdict =
     jobs < 0 ? 'Not favorable' : jobs >= JOBS_FAVORABLE_MIN ? 'Favorable' : 'Mixed'
-  const why =
-    jobs >= JOBS_STRONG_MIN
-      ? 'strong job growth'
-      : jobs >= JOBS_FAVORABLE_MIN
-        ? 'rising jobs'
-        : jobs >= 0
-          ? 'little job growth'
-          : 'declining jobs'
 
-  const ratioLabel = ratio == null ? null : ratio < 0.05 ? `${ratio.toFixed(2)}×` : `${ratio.toFixed(1)}×`
+  const jobsBecause =
+    jobs >= JOBS_STRONG_MIN
+      ? 'job growth is strong'
+      : jobs >= JOBS_FAVORABLE_MIN
+        ? 'jobs are rising'
+        : jobs >= 0
+          ? 'there is little job growth'
+          : 'jobs are declining'
+  const aiHelps = ai <= 4
+  const aiHurts = ai > 5.5
+  const why =
+    verdict === 'Favorable'
+      ? aiHurts
+        ? `because ${jobsBecause}, in spite of ${aiWord} AI exposure`
+        : aiHelps
+          ? `because ${jobsBecause} and AI exposure is ${aiWord}`
+          : `because ${jobsBecause}`
+      : aiHurts
+        ? `because ${jobsBecause} and AI exposure is ${aiWord}`
+        : aiHelps
+          ? `because ${jobsBecause}, in spite of ${aiWord} AI exposure`
+          : `because ${jobsBecause}`
 
   return (
     <div className="mb-8 max-w-4xl">
       <p className="text-base sm:text-lg text-ink leading-[1.7]">
-        <strong className="font-bold">{verdict}</strong>
-        {why ? `: ${why}` : null}.
-      </p>
-      <p className="mt-2 text-base sm:text-lg text-ink leading-[1.8] flex flex-wrap items-baseline gap-x-2 gap-y-2">
-        <span className="whitespace-nowrap">
-          <TldrStat className="text-ink">{formatSignedCompactCount(jobs)}</TldrStat> jobs
-        </span>
-        <span className="text-muted" aria-hidden>
-          ·
-        </span>
-        <span className="whitespace-nowrap">
-          <TldrStat className="text-ink">{aiLabel}</TldrStat> AI
-        </span>
-        <span className="text-muted" aria-hidden>
-          ·
-        </span>
-        <span className="whitespace-nowrap">
-          <TldrStat className="text-ink">{formatSalaryK(stats.avgSalary)}</TldrStat> entry
-        </span>
-        <span className="text-muted" aria-hidden>
-          ·
-        </span>
-        <span className="whitespace-nowrap">
-          <TldrStat className="text-ink">{formatCompactCount(stats.totalOpenings)}</TldrStat> openings
-        </span>
-        {ratioLabel ? (
-          <>
-            <span className="text-muted" aria-hidden>
-              ·
-            </span>
-            <span className="whitespace-nowrap">
-              <TldrStat className="text-ink">{ratioLabel}</TldrStat> grads per opening
-            </span>
-          </>
-        ) : null}
+        <strong className="font-bold">{verdict}</strong> {why}.
       </p>
     </div>
   )
@@ -720,88 +680,60 @@ function GameplanCta({
   )
 }
 
-function NewPathStrip({
-  path,
-  traditional,
-  majorName,
-  occupationsBySoc,
-  selectedSocs,
-  onToggleSoc,
-}: {
-  path: UnobviousPath
-  traditional: string
-  majorName: string
-  occupationsBySoc: Map<string, Occupation>
-  selectedSocs: Set<string>
-  onToggleSoc: (soc: string) => void
-}) {
+function AdjacencyChip() {
   return (
-    <section className="mb-8 max-w-4xl">
-      <p className="text-[11px] font-mono uppercase tracking-wider text-ink">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary mr-1.5 align-middle" aria-hidden />
-        New path
-      </p>
-      <h2 className="mt-1 text-2xl sm:text-4xl font-bold tracking-tight text-ink text-balance">
-        Traditional entry: {traditional}
-      </h2>
-      <p className="mt-3 text-base sm:text-lg text-muted leading-relaxed">
-        Three other doors a {majorName} grad can walk through. Not the usual first
-        job.
-      </p>
-      <ul className="mt-5 grid gap-3 md:grid-cols-3">
-        {path.jobs.map((job) => {
-          const occ = job.soc ? occupationsBySoc.get(job.soc) : undefined
-          const selected = Boolean(job.soc && selectedSocs.has(job.soc))
-          return (
-            <li key={job.title}>
-              {occ && job.soc ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onToggleSoc(job.soc as string)
-                    document.getElementById('occupations')?.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'start',
-                    })
-                  }}
-                  className={`w-full h-full text-left rounded-lg border px-4 py-4 min-h-12 ${
-                    selected
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-ink'
-                  }`}
-                >
-                  <NewPathBadge />
-                  <p className="mt-2 font-medium text-ink leading-snug">{job.title}</p>
-                  <p className="mt-2 text-sm text-muted leading-relaxed">{job.why}</p>
-                  <p className="mt-3 font-mono text-sm tabular-nums text-ink">
-                    {formatSalaryK(occ.entrySalary)} entry
-                    <span className="text-muted">
-                      {' '}
-                      · {formatCompactCount(occ.openPositions)} openings
-                    </span>
-                  </p>
-                </button>
-              ) : (
-                <div className="h-full rounded-lg border border-border px-4 py-4">
-                  <NewPathBadge />
-                  <p className="mt-2 font-medium text-ink leading-snug">{job.title}</p>
-                  <p className="mt-2 text-sm text-muted leading-relaxed">{job.why}</p>
-                </div>
-              )}
-            </li>
-          )
-        })}
-      </ul>
-    </section>
+    <span className="inline-flex items-center rounded-full bg-adjacency/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-adjacency">
+      Adjacency
+    </span>
   )
 }
 
-function NewPathBadge() {
+function adjacentRowClass({
+  isAdjacent,
+  selecting,
+  selected,
+  isRelevant,
+}: {
+  isAdjacent: boolean
+  selecting: boolean
+  selected: boolean
+  isRelevant: boolean
+}) {
+  const bits = ['border-b border-border/50 transition-colors']
+  if (selecting) bits.push('cursor-pointer')
+  if (selected) bits.push('bg-primary/5')
+  if (!isRelevant && !isAdjacent) bits.push('text-ink/70')
+  if (isAdjacent && !selected) bits.push('bg-adjacency/[0.08] hover:bg-adjacency/[0.14]')
+  else if (!selected) bits.push('hover:bg-surface-hover')
+  return bits.join(' ')
+}
+
+function OccupationName({
+  title,
+  soc,
+  why,
+  isAdjacent,
+}: {
+  title: string
+  soc?: string
+  why?: string
+  isAdjacent: boolean
+}) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink">
-      <span className="block w-1.5 h-1.5 rounded-full bg-primary" aria-hidden />
-      New
-    </span>
+    <div className="min-w-0">
+      <div className="font-medium text-ink leading-snug flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>{title}</span>
+        {isAdjacent ? <AdjacencyChip /> : null}
+      </div>
+      {isAdjacent && why ? (
+        <p className="mt-1.5 text-[12px] leading-relaxed text-muted max-w-xs">{why}</p>
+      ) : null}
+      {soc ? (
+        <div className="text-[11px] text-muted mt-0.5 font-mono">SOC {soc}</div>
+      ) : (
+        <div className="text-[11px] text-muted mt-0.5">Editorial pick · no SOC match</div>
+      )}
+    </div>
   )
 }
 
@@ -879,10 +811,124 @@ function SortChevron({ active, direction }: { active: boolean; direction: SortDi
   )
 }
 
+function TooNewCell({ colSpan }: { colSpan: number }) {
+  return (
+    <td colSpan={colSpan} className="px-3 py-3 align-middle text-center text-muted">
+      {TOO_NEW_TO_CALCULATE}
+    </td>
+  )
+}
+
+function OccupancyRow({
+  occ,
+  why,
+  isAdjacent,
+  isRelevant,
+  mapBase,
+  mapFrom,
+  impact,
+  wageTrend,
+  selected,
+  onToggle,
+  selecting,
+}: {
+  occ: Occupation
+  why?: string
+  isAdjacent: boolean
+  isRelevant: boolean
+  mapBase: string
+  mapFrom: string
+  impact?: AiImpactScore
+  wageTrend?: EntryWageTrend
+  selected: boolean
+  onToggle: () => void
+  selecting: boolean
+}) {
+  return (
+    <tr
+      className={adjacentRowClass({
+        isAdjacent,
+        selecting,
+        selected,
+        isRelevant,
+      })}
+      onClick={selecting ? onToggle : undefined}
+    >
+      <td className="px-3 py-3 align-top">
+        <div className="flex items-start gap-3">
+          {selecting ? (
+            <JobCheck
+              checked={selected}
+              label={`Select ${sentenceCase(occ.title)}`}
+              onToggle={onToggle}
+            />
+          ) : null}
+          <OccupationName
+            title={sentenceCase(occ.title)}
+            soc={occ.soc}
+            why={why}
+            isAdjacent={isAdjacent}
+          />
+        </div>
+      </td>
+      <td className="px-3 py-3 text-right align-top">
+        <div className="font-mono tabular-nums text-ink">{formatSalary(occ.entrySalary)}</div>
+        <div className="text-[11px] text-muted mt-0.5">
+          median {formatSalary(occ.medianSalary)}
+        </div>
+      </td>
+      <td className="px-3 py-3 text-right align-top font-mono tabular-nums text-openings">
+        <div className="flex flex-col items-end">
+          <div>{formatNumber(occ.openPositions)}</div>
+          <WageSparkline trend={wageTrend} />
+        </div>
+      </td>
+      <td className="px-3 py-3 align-top">
+        <CompetitionCell level={occ.competitionLevel} ratio={occ.graduatesPerOpening} />
+      </td>
+      <td className="px-3 py-3 align-top">
+        <AiRiskCell occ={occ} />
+      </td>
+      <td className="px-3 py-3 align-top">
+        <EntryBarrierCell impact={impact} trend={wageTrend} />
+      </td>
+      <td className="px-3 py-3 align-top">
+        <Link
+          to={`${mapBase}/${occ.soc}${mapFrom}`}
+          onClick={(e) => e.stopPropagation()}
+          className="text-ink underline underline-offset-2 hover:text-primary text-sm"
+        >
+          Map
+        </Link>
+      </td>
+    </tr>
+  )
+}
+
+function OrphanRow({ job }: { job: UnobviousJob }) {
+  return (
+    <tr
+      className={adjacentRowClass({
+        isAdjacent: true,
+        selecting: false,
+        selected: false,
+        isRelevant: false,
+      })}
+    >
+      <td className="px-3 py-3 align-top">
+        <OccupationName title={job.title} why={job.why} isAdjacent />
+      </td>
+      <TooNewCell colSpan={METRIC_COL_COUNT + 1} />
+    </tr>
+  )
+}
+
 function OccupationTable({
   occupations,
   relevantSocs,
   newPathSocs,
+  whyBySoc,
+  orphanJobs,
   mapBase,
   mapFrom,
   sortField,
@@ -898,6 +944,8 @@ function OccupationTable({
   occupations: Occupation[]
   relevantSocs: Set<string>
   newPathSocs: Set<string>
+  whyBySoc: Map<string, string>
+  orphanJobs: UnobviousJob[]
   mapBase: string
   mapFrom: string
   sortField: TableSort
@@ -913,6 +961,45 @@ function OccupationTable({
   const selectedCount = occupations.filter((o) => selectedSocs.has(o.soc)).length
   const allSelected = occupations.length > 0 && selectedCount === occupations.length
   const someSelected = selectedCount > 0 && !allSelected
+  const displayRows = tableDisplayRows(occupations, orphanJobs, newPathSocs)
+
+  function occRow(occ: Occupation) {
+    return (
+      <OccupancyRow
+        key={occ.soc}
+        occ={occ}
+        why={whyBySoc.get(occ.soc)}
+        isAdjacent={newPathSocs.has(occ.soc)}
+        isRelevant={relevantSocs.has(occ.soc)}
+        mapBase={mapBase}
+        mapFrom={mapFrom}
+        impact={aiImpactBySoc.get(occ.soc)}
+        wageTrend={wageTrendBySoc.get(occ.soc)}
+        selected={selectedSocs.has(occ.soc)}
+        onToggle={() => onToggleSoc(occ.soc)}
+        selecting={selecting}
+      />
+    )
+  }
+
+  function occCard(occ: Occupation) {
+    return (
+      <OccCard
+        key={occ.soc}
+        occ={occ}
+        isRelevant={relevantSocs.has(occ.soc)}
+        isNewPath={newPathSocs.has(occ.soc)}
+        why={whyBySoc.get(occ.soc)}
+        mapBase={mapBase}
+        mapFrom={mapFrom}
+        impact={aiImpactBySoc.get(occ.soc)}
+        wageTrend={wageTrendBySoc.get(occ.soc)}
+        selected={selectedSocs.has(occ.soc)}
+        onToggle={() => onToggleSoc(occ.soc)}
+        selecting={selecting}
+      />
+    )
+  }
 
   return (
     <div id="occupations" className="scroll-mt-20">
@@ -955,21 +1042,13 @@ function OccupationTable({
       </div>
 
       <div className="lg:hidden space-y-3">
-        {occupations.map((occ) => (
-          <OccCard
-            key={occ.soc}
-            occ={occ}
-            isRelevant={relevantSocs.has(occ.soc)}
-            isNewPath={newPathSocs.has(occ.soc)}
-            mapBase={mapBase}
-            mapFrom={mapFrom}
-            impact={aiImpactBySoc.get(occ.soc)}
-            wageTrend={wageTrendBySoc.get(occ.soc)}
-            selected={selectedSocs.has(occ.soc)}
-            onToggle={() => onToggleSoc(occ.soc)}
-            selecting={selecting}
-          />
-        ))}
+        {displayRows.map((row) =>
+          row.kind === 'orphan' ? (
+            <OrphanCard key={row.key} job={row.job} />
+          ) : (
+            occCard(row.occ)
+          ),
+        )}
       </div>
 
       <div className="hidden lg:block overflow-x-auto">
@@ -1018,76 +1097,13 @@ function OccupationTable({
             </tr>
           </thead>
           <tbody>
-            {occupations.map((occ) => (
-              <tr
-                key={occ.soc}
-                className={`border-b border-border/50 hover:bg-surface-hover transition-colors ${
-                  selecting ? 'cursor-pointer' : ''
-                } ${selectedSocs.has(occ.soc) ? 'bg-primary/5' : ''} ${
-                  relevantSocs.has(occ.soc) ? '' : 'text-ink/70'
-                }`}
-                onClick={selecting ? () => onToggleSoc(occ.soc) : undefined}
-              >
-                <td className="px-3 py-3 align-top">
-                  <div className="flex items-start gap-3">
-                    {selecting ? (
-                      <JobCheck
-                        checked={selectedSocs.has(occ.soc)}
-                        label={`Select ${sentenceCase(occ.title)}`}
-                        onToggle={() => onToggleSoc(occ.soc)}
-                      />
-                    ) : null}
-                    <div className="min-w-0">
-                      <div className="font-medium text-ink leading-snug">
-                        {sentenceCase(occ.title)}
-                        {newPathSocs.has(occ.soc) ? (
-                          <span className="ml-2 align-middle">
-                            <NewPathBadge />
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="text-[11px] text-muted mt-0.5 font-mono">SOC {occ.soc}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-3 py-3 text-right align-top">
-                  <div className="font-mono tabular-nums text-ink">{formatSalary(occ.entrySalary)}</div>
-                  <div className="text-[11px] text-muted mt-0.5">
-                    median {formatSalary(occ.medianSalary)}
-                  </div>
-                </td>
-                <td className="px-3 py-3 text-right align-top font-mono tabular-nums text-openings">
-                  <div className="flex flex-col items-end">
-                    <div>{formatNumber(occ.openPositions)}</div>
-                    <WageSparkline trend={wageTrendBySoc.get(occ.soc)} />
-                  </div>
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <CompetitionCell
-                    level={occ.competitionLevel}
-                    ratio={occ.graduatesPerOpening}
-                  />
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <AiRiskCell occ={occ} />
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <EntryBarrierCell
-                    impact={aiImpactBySoc.get(occ.soc)}
-                    trend={wageTrendBySoc.get(occ.soc)}
-                  />
-                </td>
-                <td className="px-3 py-3 align-top">
-                  <Link
-                    to={`${mapBase}/${occ.soc}${mapFrom}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-ink underline underline-offset-2 hover:text-primary text-sm"
-                  >
-                    Map
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {displayRows.map((row) =>
+              row.kind === 'orphan' ? (
+                <OrphanRow key={row.key} job={row.job} />
+              ) : (
+                occRow(row.occ)
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -1103,6 +1119,7 @@ function OccCard({
   occ,
   isRelevant,
   isNewPath,
+  why,
   mapBase,
   mapFrom,
   impact,
@@ -1114,6 +1131,7 @@ function OccCard({
   occ: Occupation
   isRelevant: boolean
   isNewPath: boolean
+  why?: string
   mapBase: string
   mapFrom: string
   impact?: AiImpactScore
@@ -1122,29 +1140,28 @@ function OccCard({
   onToggle: () => void
   selecting: boolean
 }) {
-  return (
-    <div
-      className={`border rounded-lg p-4 ${selecting ? 'cursor-pointer' : ''} ${
-        selected ? 'border-primary bg-primary/5' : isRelevant ? 'border-border' : 'border-dashed border-border'
-      }`}
-      onClick={selecting ? onToggle : undefined}
-    >
+  const adjacentFrame =
+    isNewPath && !selected
+      ? 'border-border bg-adjacency/[0.08]'
+      : selected
+        ? 'border-primary bg-primary/5'
+        : isRelevant
+          ? 'border-border'
+          : 'border-dashed border-border'
+
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
           {selecting ? (
             <JobCheck checked={selected} label={sentenceCase(occ.title)} onToggle={onToggle} />
           ) : null}
-          <div className="min-w-0">
-            <div className="font-medium text-ink leading-snug">
-              {sentenceCase(occ.title)}
-              {isNewPath ? (
-                <span className="ml-2 align-middle">
-                  <NewPathBadge />
-                </span>
-              ) : null}
-            </div>
-            <div className="text-[11px] text-muted mt-0.5 font-mono">SOC {occ.soc}</div>
-          </div>
+          <OccupationName
+            title={sentenceCase(occ.title)}
+            soc={occ.soc}
+            why={why}
+            isAdjacent={isNewPath}
+          />
         </div>
         <div className="flex flex-col items-end gap-0.5 shrink-0 text-sm font-medium">
           <Link
@@ -1182,6 +1199,24 @@ function OccCard({
           <EntryBarrierCell impact={impact} trend={wageTrend} />
         </div>
       </div>
+    </>
+  )
+
+  return (
+    <div
+      className={`border rounded-lg p-4 ${selecting ? 'cursor-pointer' : ''} ${adjacentFrame}`}
+      onClick={selecting ? onToggle : undefined}
+    >
+      {body}
+    </div>
+  )
+}
+
+function OrphanCard({ job }: { job: UnobviousJob }) {
+  return (
+    <div className="rounded-lg border border-border bg-adjacency/[0.08] p-4">
+      <OccupationName title={job.title} why={job.why} isAdjacent />
+      <p className="mt-3 text-sm text-muted">{TOO_NEW_TO_CALCULATE}</p>
     </div>
   )
 }
@@ -1399,7 +1434,7 @@ const COLUMN_DEFINITIONS = [
   },
   {
     term: 'AI exposure',
-    body: 'How much of this job’s day-to-day work AI can already do or assist, scored 0 to 10 from task-level ratings (Karpathy/BLS, Eloundou et al.). High exposure means the work changes; it does not always mean fewer jobs.',
+    body: 'How much of this job’s day-to-day work AI can already do or assist, scored 0 to 10 from task-level ratings (Karpathy/BLS). High exposure means the work changes; it does not always mean fewer jobs.',
   },
   {
     term: 'Entry barrier',
@@ -1428,6 +1463,78 @@ function ColumnDefinitions() {
   )
 }
 
+type TableDisplayRow =
+  | { key: string; kind: 'orphan'; job: UnobviousJob }
+  | { key: string; kind: 'occ'; occ: Occupation }
+
+/** Sit orphans with accelerating adjacent jobs, never above a declining row. */
+function tableDisplayRows(
+  occupations: Occupation[],
+  orphanJobs: UnobviousJob[],
+  adjacentSocs: Set<string>,
+): TableDisplayRow[] {
+  const rows: TableDisplayRow[] = []
+  let orphansPlaced = false
+  const placeOrphans = () => {
+    if (orphansPlaced) return
+    orphansPlaced = true
+    for (const job of orphanJobs) {
+      rows.push({ key: `orphan-${job.title}`, kind: 'orphan', job })
+    }
+  }
+  for (const occ of occupations) {
+    if (momentumRank(occ) < 2) placeOrphans()
+    rows.push({ key: occ.soc, kind: 'occ', occ })
+    if (adjacentSocs.has(occ.soc) && momentumRank(occ) === 2) placeOrphans()
+  }
+  placeOrphans()
+  return rows
+}
+
+function growthRate(occ: Occupation): number {
+  return typeof occ.projectedGrowthRate === 'number' && !Number.isNaN(occ.projectedGrowthRate)
+    ? occ.projectedGrowthRate
+    : Number.NEGATIVE_INFINITY
+}
+
+const YOY_NOISE = 0.5
+
+/** 2 = accelerating, 1 = flat, 0 = declining. Year-over-year employment wins over 10-year outlook. */
+function momentumRank(occ: Occupation): 0 | 1 | 2 {
+  const yoy = occ.yoyEmploymentChange
+  if (typeof yoy === 'number' && !Number.isNaN(yoy)) {
+    if (yoy > YOY_NOISE) return 2
+    if (yoy < -YOY_NOISE) return 0
+    return 1
+  }
+  const growth = growthRate(occ)
+  if (growth === Number.NEGATIVE_INFINITY) return 1
+  if (growth > 1) return 2
+  if (growth < -1) return 0
+  return 1
+}
+
+/** Positive if `a` is more accelerating than `b`. */
+function compareMomentum(a: Occupation, b: Occupation): number {
+  return momentumRank(a) - momentumRank(b)
+}
+
+/** Accelerating first, then BLS projected growth, then annual openings. */
+function compareOpeningsRising(
+  a: Occupation,
+  b: Occupation,
+  direction: SortDirection,
+): number {
+  const momentum = compareMomentum(a, b)
+  if (momentum !== 0) return direction === 'asc' ? momentum : -momentum
+  const ag = growthRate(a)
+  const bg = growthRate(b)
+  if (ag !== bg) return direction === 'asc' ? ag - bg : bg - ag
+  return direction === 'asc'
+    ? a.openPositions - b.openPositions
+    : b.openPositions - a.openPositions
+}
+
 function sortValue(
   occ: Occupation,
   field: TableSort,
@@ -1438,6 +1545,7 @@ function sortValue(
     const level = entryBarrierLevel(aiImpactBySoc.get(occ.soc), wageTrendBySoc.get(occ.soc))
     return level === 'Rising' ? 2 : level === 'Steady' ? 1 : level === 'Falling' ? 0 : null
   }
+  if (field === 'openPositions') return growthRate(occ)
   const value = occ[field]
   return typeof value === 'number' || typeof value === 'string' ? value : null
 }

@@ -21,6 +21,7 @@
   --color-muted: #5c5c5c;
   --color-openings: #000000;
   --color-accent: #ff5a3d;
+  --color-adjacency: #3dcdc0;
   --color-positive: #000000;
   --color-negative: #ff5a3d;
   --color-warning: #ff5a3d;
@@ -53,6 +54,7 @@ html.report-shell {
   --color-muted: #a3a3a3;
   --color-openings: #ffffff;
   --color-accent: #ff5a3d;
+  --color-adjacency: #5ee0c8;
   --color-positive: #ffffff;
   --color-negative: #ff5a3d;
   --color-warning: #ff5a3d;
@@ -93,29 +95,6 @@ html.field-report:not(.report-shell) body {
   background: #ffffff;
   background-image: none;
   color: #000000;
-}
-
-@keyframes exhibit-bar {
-  from {
-    height: 0;
-  }
-}
-
-@keyframes exhibit-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.exhibit-bar {
-  animation: exhibit-bar 0.5s ease-out both;
-}
-
-.exhibit-fade {
-  animation: exhibit-fade 0.25s ease-out both;
 }
 
 @layer base {
@@ -186,6 +165,23 @@ html.report-shell::-webkit-scrollbar-thumb,
 html.report-shell *::-webkit-scrollbar-thumb {
   background: #404040;
   border-radius: 4px;
+}
+
+.dead-field-poster {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #080808;
+  color: #f4f1ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.dead-field-poster__art {
+  width: min(100%, 1600px);
+  height: auto;
+  display: block;
 }
 
 @layer utilities {
