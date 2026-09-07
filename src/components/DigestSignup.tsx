@@ -70,7 +70,7 @@ type QuietEmailFormProps = {
   autoFocus?: boolean
 } & ReturnType<typeof useLetterSubscribe>
 
-/** Unbranded email + Send capture. Subscribes to the letter without naming it. */
+/** Unbranded email + Send capture. Subscribes without naming the product. */
 export function QuietEmailForm({
   idPrefix = 'report',
   autoFocus = false,
@@ -138,14 +138,14 @@ export function DigestSignup({
   })
 
   return (
-    <section id="letter" className="mt-14 border-t border-border pt-12">
-      <p className="text-xs uppercase tracking-wider text-muted font-mono mb-2">Next</p>
+    <section id="next" className="mt-14 border-t border-border pt-12">
       <h2 className="font-sans text-2xl sm:text-3xl font-bold text-ink tracking-tight">
-        dearCC The Letter
+        NEXT
       </h2>
       <p className="mt-3 text-muted max-w-xl leading-relaxed">
-        You just mapped the labor market. Get a 15-minute Sunday email: real AI news,
-        picks for your path, and one thing to build.
+        Sign up for our weekly updates to help you stay on top of the labor market. Get a
+        15-minute Sunday email: real news, no slop, picks for your path, and one thing to
+        build.
       </p>
 
       {status === 'sent' || status === 'skipped' ? (
@@ -158,24 +158,24 @@ export function DigestSignup({
             {status === 'skipped' ? "You're already on the list." : "You're in."}
           </p>
           <p className="mt-1 text-sm text-muted">
-            Check <span className="text-ink">{email}</span> for your letter.
+            Check <span className="text-ink">{email}</span> for your first update.
           </p>
           {base && (
             <a
               href={base}
               className="mt-4 inline-flex w-full sm:w-auto justify-center rounded-lg bg-ink px-4 py-3 text-sm font-bold text-page hover:bg-primary hover:text-ink transition-colors min-h-11"
             >
-              Open The Letter →
+              Open NEXT →
             </a>
           )}
         </div>
       ) : (
         <form onSubmit={onSubmit} className="mt-8 flex flex-col sm:flex-row gap-3 max-w-lg">
-          <label className="sr-only" htmlFor="letter-email">
+          <label className="sr-only" htmlFor="next-email">
             Email
           </label>
           <input
-            id="letter-email"
+            id="next-email"
             type="email"
             required
             autoComplete="email"
@@ -190,7 +190,7 @@ export function DigestSignup({
             disabled={status === 'sending'}
             className="w-full sm:w-auto shrink-0 rounded-lg bg-ink px-5 py-3.5 sm:py-3 font-bold text-page hover:bg-primary hover:text-ink transition-colors min-h-11"
           >
-            {status === 'sending' ? 'Sending…' : 'Send my first letter'}
+            {status === 'sending' ? 'Sending…' : 'Sign up'}
           </button>
         </form>
       )}
@@ -199,10 +199,6 @@ export function DigestSignup({
         <p role="alert" className="mt-3 text-sm text-negative">
           {errorMsg ?? 'Something went wrong. Try again in a minute.'}
         </p>
-      )}
-
-      {status === 'idle' && (
-        <p className="mt-3 text-xs text-muted">Powered by dearCC The Letter.</p>
       )}
     </section>
   )

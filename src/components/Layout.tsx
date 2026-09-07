@@ -77,7 +77,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   <>
                     {' · '}
                     <a className="text-muted hover:text-ink underline" href={letterUrl}>
-                      The Letter
+                      NEXT
                     </a>
                   </>
                 ) : null}

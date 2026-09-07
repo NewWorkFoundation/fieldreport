@@ -7,7 +7,7 @@ Search a U.S. college major → linked occupations with BLS wages, openings, com
 ```bash
 npm install
 cp .env.example .env.local
-# Set VITE_LETTER_URL to your The Letter deployment (for the email CTA)
+# Set VITE_LETTER_URL to your NEXT / weekly updates site (for the email CTA)
 npm run dev
 ```
 
@@ -16,7 +16,7 @@ npm run dev
 - **Vercel** — import [skyspeak/fieldreport](https://github.com/skyspeak/fieldreport); set `VITE_LETTER_URL`.
 - **GitHub Pages** — Actions build with `GITHUB_PAGES=true` (base `/fieldreport/`).
 
-The Results/Map email CTA posts to `${VITE_LETTER_URL}/api/subscribe` (CORS enabled on The Letter).
+The Results/Map email CTA posts to `${VITE_LETTER_URL}/api/subscribe` (CORS enabled on that site).
 
 ## Stack
 
