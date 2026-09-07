@@ -30,7 +30,6 @@ import { isRealMajor, majorDisplayName } from '../lib/majorName'
 import { newPathSocs, pathForCip, traditionalEntry } from '../lib/unobviousPaths'
 import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
-import { useTheme } from '../lib/theme'
 import type {
   AiImpactScore,
   EntryWageTrend,
@@ -139,7 +138,6 @@ export function ResultsPage() {
     loading,
   } = useData()
   const { home, mapBase, resultsBase } = useAppPaths()
-  const { isDark } = useTheme()
 
   const [showAll, setShowAll] = useState(false)
   const [sortField, setSortField] = useState<TableSort>('entrySalary')
@@ -312,74 +310,75 @@ export function ResultsPage() {
   const mapFrom = major ? `?from=${encodeURIComponent(major.cip)}` : ''
 
   return (
-    <div
-      className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 ${
-        selectedRoles.length > 0 ? 'pb-28' : ''
-      }`}
-    >
+    <div className={selectedRoles.length > 0 ? 'pb-28' : ''}>
       <DocumentMeta
         title={displayName}
         description={`BLS salaries, openings, AI-exposure, and Eloundou β (LLM task exposure) for careers linked to ${displayName}.`}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-        <div className="min-w-0">
-          <Link
-            to={home}
-            className="text-sm text-muted hover:text-ink mb-1 inline-flex items-center min-h-11 py-2"
-          >
-            ← Back
-          </Link>
-          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-ink text-balance">
-            The job market for {displayName}
-          </h1>
-          <p className="text-sm text-muted mt-2 font-mono">
-            CIP {cipCode}
-            {major ? ` · ${major.category}` : ''}
-          </p>
-        </div>
-        <div className="w-full sm:w-72 lg:w-80 shrink-0 sm:pt-10">
-          <MajorSearch
-            majors={majors}
-            size="md"
-            resultsBase={resultsBase}
-            placeholder="Search your major"
-            tone={isDark ? 'dark' : 'light'}
-          />
-        </div>
-      </div>
+      <section className="results-hero">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+            <div className="min-w-0">
+              <Link
+                to={home}
+                className="text-sm text-muted hover:text-ink mb-1 inline-flex items-center min-h-11 py-2"
+              >
+                ← Back
+              </Link>
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-ink text-balance">
+                The job market for {displayName}
+              </h1>
+              <p className="text-sm text-muted mt-2 font-mono">
+                CIP {cipCode}
+                {major ? ` · ${major.category}` : ''}
+              </p>
+            </div>
+            <div className="w-full sm:w-72 lg:w-80 shrink-0 sm:pt-10">
+              <MajorSearch
+                majors={majors}
+                size="md"
+                resultsBase={resultsBase}
+                placeholder="Search your major"
+                tone="dark"
+              />
+            </div>
+          </div>
 
-      {stats && <TldrCard majorName={displayName} stats={stats} />}
+          {stats && <TldrCard majorName={displayName} stats={stats} />}
 
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <MetricCard
-            label="Projected openings"
-            value={formatCompactCount(stats.totalOpenings)}
-            mark={stats.avgGrowth > 0 ? '▲' : stats.avgGrowth < 0 ? '▼' : undefined}
-            sublabel={`per year · employment ${formatGrowth(stats.avgGrowth)} by 2034`}
-          />
-          <MetricCard
-            label="Entry salary"
-            value={formatSalaryK(stats.avgSalary)}
-            mark="→"
-            sublabel="25th percentile · BLS, averaged"
-          />
-          <MetricCard
-            label="Competition"
-            value={
-              stats.avgCompetition == null ? 'N/A' : `${stats.avgCompetition.toFixed(1)}×`
-            }
-            sublabel="grads per opening, weighted"
-          />
-          <MetricCard
-            label="Eloundou β"
-            value={stats.avgEloundou == null ? '—' : formatShare(stats.avgEloundou)}
-            sublabel="LLM task exposure, GPT-4"
-          />
+          {stats && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <MetricCard
+                label="Projected openings"
+                value={formatCompactCount(stats.totalOpenings)}
+                mark={stats.avgGrowth > 0 ? '▲' : stats.avgGrowth < 0 ? '▼' : undefined}
+                sublabel={`per year · employment ${formatGrowth(stats.avgGrowth)} by 2034`}
+              />
+              <MetricCard
+                label="Entry salary"
+                value={formatSalaryK(stats.avgSalary)}
+                mark="→"
+                sublabel="25th percentile · BLS, averaged"
+              />
+              <MetricCard
+                label="Competition"
+                value={
+                  stats.avgCompetition == null ? 'N/A' : `${stats.avgCompetition.toFixed(1)}×`
+                }
+                sublabel="grads per opening, weighted"
+              />
+              <MetricCard
+                label="Eloundou β"
+                value={stats.avgEloundou == null ? '—' : formatShare(stats.avgEloundou)}
+                sublabel="LLM task exposure, GPT-4"
+              />
+            </div>
+          )}
         </div>
-      )}
+      </section>
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {newPath ? (
         <NewPathStrip
           path={newPath}
@@ -442,6 +441,7 @@ export function ResultsPage() {
 
       <SeverityLegend />
       <ColumnDefinitions />
+      </div>
     </div>
   )
 }

@@ -69,6 +69,26 @@ html.report-shell body {
   color: #fff;
 }
 
+/* Results page top band — always the dark editorial header. */
+.results-hero {
+  color-scheme: dark;
+  background: #000000;
+  color: #ffffff;
+  --color-ink: #ffffff;
+  --color-page: #000000;
+  --color-paper: #171717;
+  --color-canvas: #000000;
+  --color-surface: #171717;
+  --color-surface-hover: #262626;
+  --color-card: #171717;
+  --color-inset: #171717;
+  --color-border: #2a2a2a;
+  --color-border-bright: #404040;
+  --color-muted: #a3a3a3;
+  --color-openings: #ffffff;
+  --color-placeholder: #9a9a9a;
+}
+
 html.field-report:not(.report-shell) body {
   background: #ffffff;
   background-image: none;
