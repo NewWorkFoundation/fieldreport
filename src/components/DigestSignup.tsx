@@ -13,7 +13,7 @@ function letterBase(): string {
   return (import.meta.env.VITE_LETTER_URL as string | undefined)?.replace(/\/$/, '') ?? ''
 }
 
-export function DigestSignup({
+export function useLetterSubscribe({
   industry,
   role,
   focusAreas,
@@ -29,7 +29,7 @@ export function DigestSignup({
     if (!email.trim()) return
     if (!base) {
       setStatus('error')
-      setErrorMsg('VITE_LETTER_URL is not configured')
+      setErrorMsg("Couldn't send this right now. Try again in a minute.")
       return
     }
     setStatus('sending')
@@ -60,6 +60,81 @@ export function DigestSignup({
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')
     }
   }
+
+  return { email, setEmail, status, errorMsg, base, onSubmit }
+}
+
+type QuietEmailFormProps = {
+  idPrefix?: string
+  autoFocus?: boolean
+} & ReturnType<typeof useLetterSubscribe>
+
+/** Unbranded email + Send capture. Subscribes to the letter without naming it. */
+export function QuietEmailForm({
+  idPrefix = 'report',
+  autoFocus = false,
+  email,
+  setEmail,
+  status,
+  errorMsg,
+  onSubmit,
+}: QuietEmailFormProps) {
+
+  if (status === 'sent' || status === 'skipped') {
+    return (
+      <p role="status" aria-live="polite" className="text-sm text-ink">
+        {status === 'skipped' ? 'Already sent.' : 'Sent.'} Check {email}.
+      </p>
+    )
+  }
+
+  return (
+    <div className="w-full max-w-md min-w-0">
+      <form onSubmit={onSubmit} className="flex items-center gap-2.5">
+        <label className="sr-only" htmlFor={`${idPrefix}-email`}>
+          Email
+        </label>
+        <input
+          id={`${idPrefix}-email`}
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Enter your email"
+          autoFocus={autoFocus}
+          disabled={status === 'sending'}
+          className="min-w-0 flex-1 rounded-lg border border-ink bg-transparent px-4 py-2.5 text-sm text-ink placeholder:text-muted focus:outline-none disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={status === 'sending'}
+          className="shrink-0 rounded-lg bg-ink px-5 py-2.5 text-sm font-bold text-page disabled:opacity-60"
+        >
+          {status === 'sending' ? 'Sending…' : 'Send'}
+        </button>
+      </form>
+      {status === 'error' && (
+        <p role="alert" className="mt-2 text-sm text-negative">
+          {errorMsg ?? 'Something went wrong. Try again in a minute.'}
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function DigestSignup({
+  industry,
+  role,
+  focusAreas,
+  sourceRef,
+}: DigestSignupProps) {
+  const { email, setEmail, status, errorMsg, base, onSubmit } = useLetterSubscribe({
+    industry,
+    role,
+    focusAreas,
+    sourceRef,
+  })
 
   return (
     <section id="letter" className="mt-14 border-t border-border pt-12">

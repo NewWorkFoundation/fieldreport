@@ -28,6 +28,7 @@ import {
 } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
 import { newPathSocs, pathForCip, traditionalEntry } from '../lib/unobviousPaths'
+import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
 import { useTheme } from '../lib/theme'
 import type {
@@ -144,12 +145,14 @@ export function ResultsPage() {
   const [sortField, setSortField] = useState<TableSort>('entrySalary')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedSocs, setSelectedSocs] = useState<Set<string>>(() => new Set())
+  const [selectingJobs, setSelectingJobs] = useState(false)
 
   useEffect(() => {
     setShowAll(false)
     setSortField('entrySalary')
     setSortDirection('desc')
     setSelectedSocs(new Set())
+    setSelectingJobs(false)
   }, [cipCode])
 
   const major = useMemo(() => {
@@ -384,11 +387,19 @@ export function ResultsPage() {
           majorName={displayName}
           occupationsBySoc={occupationsBySoc}
           selectedSocs={selectedSocs}
-          onToggleSoc={toggleSoc}
+          onToggleSoc={(soc) => {
+            setSelectingJobs(true)
+            toggleSoc(soc)
+          }}
         />
       ) : null}
 
-      <GameplanCta title={displayName} selectedRoles={selectedRoles} />
+      <GameplanCta
+        title={displayName}
+        selectedRoles={selectedRoles}
+        sourceRef={cipCode ? `report:${cipCode}` : 'report'}
+        onStartSelecting={() => setSelectingJobs(true)}
+      />
 
       <OccupationTable
         occupations={sorted}
@@ -404,6 +415,7 @@ export function ResultsPage() {
         selectedSocs={selectedSocs}
         onToggleSoc={toggleSoc}
         onToggleAll={toggleAllVisible}
+        selecting={selectingJobs}
       />
 
       {!showAll && other.length > 0 ? (
@@ -508,85 +520,63 @@ function TldrCard({
 
   const competition =
     ratio == null ? (
-      <>competition (graduates per opening) is not available for these jobs</>
+      <>grads per opening isn't available</>
     ) : ratio < 0.05 ? (
       <>
-        there are far more openings than graduates (
-        <TldrStat className="text-ink">{ratio.toFixed(2)}×</TldrStat> grads per opening)
+        far more openings than grads (
+        <TldrStat className="text-ink">{ratio.toFixed(2)}×</TldrStat>)
       </>
     ) : ratio < 1 ? (
       <>
-        demand exceeds supply, at{' '}
-        <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> graduates per opening
+        demand exceeds supply at{' '}
+        <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> grads per opening
       </>
     ) : ratio < 1.5 ? (
       <>
-        the market is roughly in balance, at{' '}
-        <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> graduates per opening
+        roughly in balance at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat>{' '}
+        grads per opening
       </>
     ) : ratio < 3 ? (
       <>
-        the market is competitive, at{' '}
-        <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> graduates per opening
+        competitive at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat> grads
+        per opening
       </>
     ) : (
       <>
         supply is tight at <TldrStat className="text-ink">{ratio.toFixed(1)}×</TldrStat>{' '}
-        graduates per opening
+        grads per opening
       </>
     )
 
   const growthBit =
-    growth >= 8 ? (
+    growth >= 2 ? (
       <>
-        Employment is projected to grow{' '}
-        <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
-      </>
-    ) : growth >= 2 ? (
-      <>
-        Employment is projected to grow{' '}
-        <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> through 2034
+        Projected <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
       </>
     ) : growth >= 0 ? (
       <>
-        Employment is projected to stay roughly flat (
+        Projected roughly flat (
         <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat>)
       </>
     ) : (
       <>
-        Employment is projected to decline{' '}
-        <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
+        Projected <TldrStat className="text-ink">{formatGrowth(growth)}</TldrStat> by 2034
       </>
     )
 
-  const aiBit =
-    ai <= 3 ? (
-      <>
-        Average AI exposure is low at <TldrStat className="text-ink">{aiLabel}</TldrStat>
-      </>
-    ) : ai <= 5.5 ? (
-      <>
-        Average AI exposure is moderate at{' '}
-        <TldrStat className="text-ink">{aiLabel}</TldrStat>
-      </>
-    ) : ai <= 7.5 ? (
-      <>
-        Average AI exposure is high at <TldrStat className="text-ink">{aiLabel}</TldrStat>
-      </>
-    ) : (
-      <>
-        Average AI exposure is very high at{' '}
-        <TldrStat className="text-ink">{aiLabel}</TldrStat>
-      </>
-    )
+  const aiWord = ai <= 3 ? 'low' : ai <= 5.5 ? 'moderate' : ai <= 7.5 ? 'high' : 'very high'
+  const aiBit = (
+    <>
+      AI threat {aiWord} at <TldrStat className="text-ink">{aiLabel}</TldrStat>
+    </>
+  )
 
   const beta = stats.avgEloundou
   const betaLabel = beta == null ? null : formatShare(beta)
   const eloundouBit =
     beta == null || betaLabel == null ? null : (
       <>
-        Eloundou β, the share of tasks GPT-4 would cut by at least half, is{' '}
-        <TldrStat className="text-ink">{betaLabel}</TldrStat>
+        Eloundou β <TldrStat className="text-ink">{betaLabel}</TldrStat>
       </>
     )
 
@@ -599,40 +589,70 @@ function TldrCard({
   const bads = [ratio != null && ratio >= 3, growth < 0, ai > 7, beta != null && beta >= 0.65].filter(
     Boolean,
   ).length
-  const closer =
-    goods >= 2 && bads === 0
-      ? 'On these measures, conditions look relatively favorable.'
-      : bads >= 2
-        ? 'Several of these measures point to a tighter path into the field.'
-        : 'The picture is mixed; the occupation table below is the better guide.'
+  const verdict = goods >= 2 && bads === 0 ? 'Favorable' : bads >= 2 ? 'Not favorable' : 'Mixed'
 
   return (
     <div className="mb-8 max-w-4xl">
       <p className="text-base sm:text-lg text-ink leading-[1.7]">
-        {name} graduates typically enter around{' '}
-        <TldrStat className="text-ink">{formatSalaryK(stats.avgSalary)}</TldrStat>. Linked
-        occupations account for about{' '}
+        <strong className="font-bold">{verdict}</strong>. {growthBit}. {aiBit}
+        {eloundouBit ? <>; {eloundouBit}</> : null}. {name} grads start around{' '}
+        <TldrStat className="text-ink">{formatSalaryK(stats.avgSalary)}</TldrStat>. About{' '}
         <TldrStat className="text-ink">{formatCompactCount(stats.totalOpenings)}</TldrStat>{' '}
-        openings a year, and {competition}. {growthBit}. {aiBit}
-        {eloundouBit ? <>, and {eloundouBit}</> : null}. {closer}
+        openings a year among linked jobs; {competition}.
       </p>
     </div>
+  )
+}
+
+function EmailReportAction({
+  open,
+  onOpen,
+  idPrefix,
+  subscribe,
+  autoFocus = false,
+}: {
+  open: boolean
+  onOpen: () => void
+  idPrefix: string
+  subscribe: ReturnType<typeof useLetterSubscribe>
+  autoFocus?: boolean
+}) {
+  if (open) {
+    return <QuietEmailForm idPrefix={idPrefix} autoFocus={autoFocus} {...subscribe} />
+  }
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
+    >
+      Not yet, just email me this report
+    </button>
   )
 }
 
 function GameplanCta({
   title,
   selectedRoles,
+  sourceRef,
+  onStartSelecting,
 }: {
   title: string
   selectedRoles: string[]
+  sourceRef: string
+  onStartSelecting: () => void
 }) {
-  const url = typeof window !== 'undefined' ? window.location.href : ''
-  const mailHref = `mailto:?subject=${encodeURIComponent(`dearCC Field report: ${title}`)}&body=${encodeURIComponent(`${title}\n\n${url}`)}`
   const count = selectedRoles.length
   const planHref = count > 0 ? gameplanHref(selectedRoles) : ''
   const inFlowRef = useRef<HTMLDivElement>(null)
   const [docked, setDocked] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const subscribe = useLetterSubscribe({
+    industry: title,
+    role: selectedRoles[0] ?? title,
+    focusAreas: selectedRoles.length ? selectedRoles : [title],
+    sourceRef,
+  })
 
   useEffect(() => {
     if (count === 0) {
@@ -662,33 +682,45 @@ function GameplanCta({
         ref={inFlowRef}
         className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5"
       >
-        {count > 0 ? (
-          <AnalyzeFitButton href={planHref} count={count} />
+        {emailOpen ? (
+          <>
+            {count > 0 ? <AnalyzeFitButton href={planHref} count={count} /> : null}
+            <QuietEmailForm idPrefix="cta-inline" autoFocus={!docked} {...subscribe} />
+          </>
         ) : (
-          <a
-            href="#occupations"
-            className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black no-underline hover:brightness-110"
-          >
-            Select target jobs →
-          </a>
+          <>
+            {count > 0 ? (
+              <AnalyzeFitButton href={planHref} count={count} />
+            ) : (
+              <a
+                href="#occupations"
+                onClick={onStartSelecting}
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black no-underline hover:brightness-110"
+              >
+                Select target jobs →
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setEmailOpen(true)}
+              className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center bg-transparent border-0 p-0 cursor-pointer"
+            >
+              Not yet, just email me this report
+            </button>
+          </>
         )}
-        <a
-          href={mailHref}
-          className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center"
-        >
-          Not yet, just email me this report
-        </a>
       </div>
       {count > 0 && docked ? (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t border-border bg-page/95 backdrop-blur-sm pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
             <AnalyzeFitButton href={planHref} count={count} />
-            <a
-              href={mailHref}
-              className="text-sm text-muted underline underline-offset-2 hover:text-ink min-h-11 inline-flex items-center"
-            >
-              Not yet, just email me this report
-            </a>
+            <EmailReportAction
+              open={emailOpen}
+              onOpen={() => setEmailOpen(true)}
+              idPrefix="cta-dock"
+              autoFocus={docked}
+              subscribe={subscribe}
+            />
           </div>
         </div>
       ) : null}
@@ -869,6 +901,7 @@ function OccupationTable({
   selectedSocs,
   onToggleSoc,
   onToggleAll,
+  selecting,
 }: {
   occupations: Occupation[]
   relevantSocs: Set<string>
@@ -883,6 +916,7 @@ function OccupationTable({
   selectedSocs: Set<string>
   onToggleSoc: (soc: string) => void
   onToggleAll: () => void
+  selecting: boolean
 }) {
   const selectedCount = occupations.filter((o) => selectedSocs.has(o.soc)).length
   const allSelected = occupations.length > 0 && selectedCount === occupations.length
@@ -890,19 +924,21 @@ function OccupationTable({
 
   return (
     <div id="occupations" className="scroll-mt-20">
-      <div className="lg:hidden mb-3 flex items-center gap-3">
-        <JobCheck
-          checked={allSelected}
-          indeterminate={someSelected}
-          label={allSelected ? 'Clear occupation selection' : 'Select all occupations'}
-          onToggle={onToggleAll}
-        />
-        <span className="text-sm text-muted">
-          {selectedCount > 0
-            ? `${selectedCount} selected`
-            : 'Select the jobs you want'}
-        </span>
-      </div>
+      {selecting ? (
+        <div className="lg:hidden mb-3 flex items-center gap-3">
+          <JobCheck
+            checked={allSelected}
+            indeterminate={someSelected}
+            label={allSelected ? 'Clear occupation selection' : 'Select all occupations'}
+            onToggle={onToggleAll}
+          />
+          <span className="text-sm text-muted">
+            {selectedCount > 0
+              ? `${selectedCount} selected`
+              : 'Select the jobs you want'}
+          </span>
+        </div>
+      ) : null}
       <div className="-mx-4 px-4 sm:mx-0 sm:px-0 mb-3 overflow-x-auto scrollbar-none lg:hidden">
         <div className="flex items-center gap-2 min-w-min pb-1">
           {SORT_CHIPS.map((chip) => {
@@ -939,6 +975,7 @@ function OccupationTable({
             wageTrend={wageTrendBySoc.get(occ.soc)}
             selected={selectedSocs.has(occ.soc)}
             onToggle={() => onToggleSoc(occ.soc)}
+            selecting={selecting}
           />
         ))}
       </div>
@@ -967,7 +1004,7 @@ function OccupationTable({
                     onClick={() => onSort(col.field)}
                   >
                     <span className="inline-flex items-center gap-2.5">
-                      {col.field === 'title' ? (
+                      {col.field === 'title' && selecting ? (
                         <JobCheck
                           checked={allSelected}
                           indeterminate={someSelected}
@@ -992,18 +1029,22 @@ function OccupationTable({
             {occupations.map((occ) => (
               <tr
                 key={occ.soc}
-                className={`border-b border-border/50 hover:bg-surface-hover transition-colors cursor-pointer ${
-                  selectedSocs.has(occ.soc) ? 'bg-primary/5' : ''
-                } ${relevantSocs.has(occ.soc) ? '' : 'text-ink/70'}`}
-                onClick={() => onToggleSoc(occ.soc)}
+                className={`border-b border-border/50 hover:bg-surface-hover transition-colors ${
+                  selecting ? 'cursor-pointer' : ''
+                } ${selectedSocs.has(occ.soc) ? 'bg-primary/5' : ''} ${
+                  relevantSocs.has(occ.soc) ? '' : 'text-ink/70'
+                }`}
+                onClick={selecting ? () => onToggleSoc(occ.soc) : undefined}
               >
                 <td className="px-3 py-3 align-top">
                   <div className="flex items-start gap-3">
-                    <JobCheck
-                      checked={selectedSocs.has(occ.soc)}
-                      label={`Select ${sentenceCase(occ.title)}`}
-                      onToggle={() => onToggleSoc(occ.soc)}
-                    />
+                    {selecting ? (
+                      <JobCheck
+                        checked={selectedSocs.has(occ.soc)}
+                        label={`Select ${sentenceCase(occ.title)}`}
+                        onToggle={() => onToggleSoc(occ.soc)}
+                      />
+                    ) : null}
                     <div className="min-w-0">
                       <div className="font-medium text-ink leading-snug">
                         {sentenceCase(occ.title)}
@@ -1073,6 +1114,7 @@ function OccCard({
   wageTrend,
   selected,
   onToggle,
+  selecting,
 }: {
   occ: Occupation
   isRelevant: boolean
@@ -1083,17 +1125,20 @@ function OccCard({
   wageTrend?: EntryWageTrend
   selected: boolean
   onToggle: () => void
+  selecting: boolean
 }) {
   return (
     <div
-      className={`border rounded-lg p-4 cursor-pointer ${
+      className={`border rounded-lg p-4 ${selecting ? 'cursor-pointer' : ''} ${
         selected ? 'border-primary bg-primary/5' : isRelevant ? 'border-border' : 'border-dashed border-border'
       }`}
-      onClick={onToggle}
+      onClick={selecting ? onToggle : undefined}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex items-start gap-3 min-w-0">
-          <JobCheck checked={selected} label={sentenceCase(occ.title)} onToggle={onToggle} />
+          {selecting ? (
+            <JobCheck checked={selected} label={sentenceCase(occ.title)} onToggle={onToggle} />
+          ) : null}
           <div className="min-w-0">
             <div className="font-medium text-ink leading-snug">
               {sentenceCase(occ.title)}

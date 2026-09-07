@@ -14,20 +14,20 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip bg-page text-ink antialiased">
       <header className="border-b border-border sticky top-0 z-30 bg-page pt-[env(safe-area-inset-top)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-14 py-2.5 flex items-center gap-3">
-          <Link
-            to={home}
-            aria-label="dearCC field report"
-            className="no-underline shrink-0 inline-flex items-center min-h-11"
-          >
-            <BrandMark size="sm" compact variant="field" />
-          </Link>
-          <div className="ml-auto shrink-0 inline-flex items-center gap-3">
-            <span className="inline-flex items-center font-sans text-[10px] font-bold uppercase tracking-[0.14em] text-muted border border-border-bright rounded-[6px] px-2.5 py-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-14 py-2.5 flex items-center justify-between gap-3">
+          <div className="min-w-0 inline-flex items-center gap-2.5">
+            <Link
+              to={home}
+              aria-label="dearCC field report"
+              className="no-underline shrink-0 inline-flex items-center min-h-11"
+            >
+              <BrandMark size="sm" compact variant="field" />
+            </Link>
+            <span className="inline-flex items-center font-sans text-[9px] font-semibold uppercase tracking-[0.16em] text-ink border border-ink/40 rounded-full px-2 py-0.5">
               Beta
             </span>
-            <ThemeToggle />
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

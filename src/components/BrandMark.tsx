@@ -31,12 +31,12 @@ export function BrandMark({
         className={isLg ? 'h-8 sm:h-11 w-auto' : 'h-5 sm:h-[22px] w-auto'}
       />
       <span
-        className={`${compact ? 'hidden sm:block' : ''} mx-2.5 sm:mx-3 h-[0.85em] w-px shrink-0 bg-ink`}
+        className={`${compact ? 'hidden sm:block' : ''} mx-2.5 sm:mx-3 h-[0.9em] w-px shrink-0 bg-ink/30`}
         aria-hidden
       />
       <span
-        className={`${compact ? 'hidden sm:inline' : ''} font-semibold tracking-tight ${
-          isLg ? 'text-sm sm:text-base' : 'text-[11.5px] sm:text-sm'
+        className={`${compact ? 'hidden sm:inline' : ''} font-medium tracking-tight text-ink ${
+          isLg ? 'text-sm sm:text-base' : 'text-[13px] sm:text-[15px]'
         }`}
       >
         field report
