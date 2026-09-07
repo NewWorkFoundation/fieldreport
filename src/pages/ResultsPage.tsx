@@ -309,7 +309,7 @@ export function ResultsPage() {
   }
 
   const displayName = major ? majorDisplayName(major.name) : cipCode
-  const mapFrom = major ? `?from=${encodeURIComponent(major.cip)}#metros` : ''
+  const mapFrom = major ? `?from=${encodeURIComponent(major.cip)}` : ''
 
   return (
     <div

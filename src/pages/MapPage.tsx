@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { geoAlbersUsa, geoPath } from 'd3-geo'
 import { scaleSequential } from 'd3-scale'
 import { feature } from 'topojson-client'
@@ -17,8 +17,6 @@ import { assetUrl } from '../lib/assetUrl'
 import { isRealMajor } from '../lib/majorName'
 import { useAppPaths } from '../lib/useAppPaths'
 import { useTheme } from '../lib/theme'
-import { loadPlaces } from '../lib/v3/data'
-import type { PlaceRow } from '../lib/v3/types'
 import type { MapColorBy } from '../types'
 
 interface StateProps {
@@ -55,7 +53,6 @@ const NAME_TO_ABBR: Record<string, string> = {
 export function MapPage() {
   const { socCode = '' } = useParams()
   const [searchParams] = useSearchParams()
-  const location = useLocation()
   const { majors, occupationsBySoc, eloundouBySoc, stateData, loading, loadStateData } =
     useData()
   const { home, resultsBase } = useAppPaths()
@@ -64,7 +61,6 @@ export function MapPage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [topo, setTopo] = useState<FeatureCollection<Geometry, StateProps> | null>(null)
   const [hover, setHover] = useState<string | null>(null)
-  const [places, setPlaces] = useState<PlaceRow[]>([])
 
   const fromCip = searchParams.get('from') ?? ''
   const fromMajor =
@@ -73,27 +69,6 @@ export function MapPage() {
   const backLabel = fromMajor
     ? `← Back to ${fromMajor.name}`
     : '← Back to search'
-  const wantMetros = location.hash === '#metros'
-
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      const list = await loadPlaces()
-      if (!cancelled) setPlaces(list.filter((p) => p.seed))
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!wantMetros || !fromMajor || places.length === 0) return
-    const id = window.setTimeout(() => {
-      document.getElementById('metros')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 80)
-    return () => window.clearTimeout(id)
-  }, [wantMetros, fromMajor, places.length, socCode])
-
   const occupation = occupationsBySoc.get(socCode)
   const eloundou = eloundouBySoc.get(socCode)
 
@@ -229,9 +204,7 @@ export function MapPage() {
             {occupation.title}
           </h1>
           <p className="text-muted mt-3 max-w-xl text-sm sm:text-base leading-relaxed">
-            {fromMajor
-              ? `State employment for this job, plus who hires ${fromMajor.name} in seed metros.`
-              : 'Pick a state for employment and salary. Color by employment, median salary, or jobs × AI exposure.'}
+            Pick a state for employment and salary. Color by employment, median salary, or jobs × AI exposure.
           </p>
         </div>
         <div className="shrink-0 w-full sm:w-auto sm:pt-6">
@@ -240,34 +213,6 @@ export function MapPage() {
             summary={`State map for ${occupation.title} with BLS wages, AI Risk, and Eloundou β, from dearCC Field report.`}
           />
         </div>
-      </div>
-
-      {fromMajor ? (
-        <SeedMetros
-          cip={fromMajor.cip}
-          majorName={fromMajor.name}
-          places={places}
-          resultsBase={resultsBase}
-        />
-      ) : null}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2.5 sm:gap-4 text-sm w-full mb-6">
-        <Metric label="Entry Salary" value={formatSalary(occupation.entrySalary)} />
-        <Metric label="Median Salary" value={formatSalary(occupation.medianSalary)} />
-        <Metric label="Total Employment" value={formatNumber(occupation.totalEmployment)} />
-        <Metric label="Annual Openings" value={formatNumber(occupation.openPositions)} />
-        <Metric
-          label="AI exposure"
-          value={
-            occupation.karpathyExposure != null ? `${occupation.karpathyExposure}/10` : '—'
-          }
-          tip={aiTip}
-        />
-        <Metric
-          label="Eloundou β"
-          value={eloundou?.gptBeta != null ? formatShare(eloundou.gptBeta) : '—'}
-          tip={ELOUNDOU_COPY}
-        />
       </div>
 
       <div className="flex flex-nowrap sm:flex-wrap items-center gap-2 mb-6 text-sm overflow-x-auto overscroll-x-contain pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
@@ -358,7 +303,7 @@ export function MapPage() {
         </ul>
       </div>
 
-      <div className="hidden lg:grid lg:grid-cols-[1fr_280px] gap-6">
+      <div className="hidden lg:grid lg:grid-cols-[1fr_280px] gap-6 mb-6">
         <div className="bg-card border border-border rounded-xl p-3 sm:p-5 overflow-hidden">
           {!stateData || !topo ? (
             <p className="text-muted py-20 text-center">Loading map data...</p>
@@ -412,6 +357,25 @@ export function MapPage() {
         </aside>
       </div>
 
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2.5 sm:gap-4 text-sm w-full mb-6">
+        <Metric label="Entry Salary" value={formatSalary(occupation.entrySalary)} />
+        <Metric label="Median Salary" value={formatSalary(occupation.medianSalary)} />
+        <Metric label="Total Employment" value={formatNumber(occupation.totalEmployment)} />
+        <Metric label="Annual Openings" value={formatNumber(occupation.openPositions)} />
+        <Metric
+          label="AI exposure"
+          value={
+            occupation.karpathyExposure != null ? `${occupation.karpathyExposure}/10` : '—'
+          }
+          tip={aiTip}
+        />
+        <Metric
+          label="Eloundou β"
+          value={eloundou?.gptBeta != null ? formatShare(eloundou.gptBeta) : '—'}
+          tip={ELOUNDOU_COPY}
+        />
+      </div>
+
       <DigestSignup
         industry="Career exploration"
         role={occupation.title}
@@ -419,106 +383,6 @@ export function MapPage() {
         sourceRef={`soc:${occupation.soc}`}
       />
     </div>
-  )
-}
-
-function shortMetro(name: string) {
-  return name.split('-')[0].split(',')[0].trim()
-}
-
-function SeedMetros({
-  cip,
-  majorName,
-  places,
-  resultsBase,
-}: {
-  cip: string
-  majorName: string
-  places: PlaceRow[]
-  resultsBase: string
-}) {
-  const navigate = useNavigate()
-  const [zip, setZip] = useState('')
-  const [zipError, setZipError] = useState(false)
-
-  function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    const cleaned = zip.replace(/\D/g, '').slice(0, 5)
-    if (!/^\d{5}$/.test(cleaned)) {
-      setZipError(true)
-      return
-    }
-    setZipError(false)
-    navigate(`${resultsBase}/${cip}/${cleaned}`)
-  }
-
-  return (
-    <section
-      id="metros"
-      className="mb-8 scroll-mt-28 rounded-lg border border-border p-4 sm:p-5"
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-mono text-[11px] uppercase tracking-wider text-muted">
-            Employers by metro
-          </p>
-          <h2 className="mt-1 font-sans text-xl sm:text-2xl font-semibold text-ink leading-tight text-balance">
-            Who hires {majorName}
-          </h2>
-        </div>
-      </div>
-
-      <ul className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-        {places.map((p) => (
-          <li key={p.zip}>
-            <Link
-              to={`${resultsBase}/${cip}/${p.zip}`}
-              className="flex flex-col justify-center min-h-12 rounded-lg border border-border bg-page px-3 py-2.5 hover:border-ink transition-colors no-underline text-ink"
-            >
-              <span className="font-medium text-sm leading-snug truncate">
-                {shortMetro(p.cbsaName)}
-              </span>
-              <span className="text-[11px] text-muted font-mono mt-0.5">{p.zip}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      <form
-        onSubmit={onSubmit}
-        className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-stretch max-w-sm"
-      >
-        <label className="sr-only" htmlFor="map-zip">
-          ZIP code
-        </label>
-        <input
-          id="map-zip"
-          inputMode="numeric"
-          autoComplete="postal-code"
-          pattern="\d{5}"
-          maxLength={5}
-          value={zip}
-          onChange={(e) => {
-            setZip(e.target.value.replace(/\D/g, '').slice(0, 5))
-            setZipError(false)
-          }}
-          aria-invalid={zipError}
-          className={`flex-1 min-h-12 rounded-lg border-2 bg-page px-4 font-mono tracking-wider text-base ${
-            zipError ? 'border-negative' : 'border-ink'
-          }`}
-          placeholder="ZIP"
-        />
-        <button
-          type="submit"
-          className="min-h-12 px-5 rounded-lg bg-ink text-page text-sm font-medium hover:opacity-90 shrink-0"
-        >
-          Go
-        </button>
-      </form>
-      {zipError ? (
-        <p className="mt-2 text-xs text-negative">Enter a 5-digit U.S. ZIP.</p>
-      ) : null}
-    </section>
   )
 }
 
