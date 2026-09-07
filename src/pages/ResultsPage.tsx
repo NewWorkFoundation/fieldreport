@@ -692,13 +692,13 @@ function GameplanCta({
             {count > 0 ? (
               <AnalyzeFitButton href={planHref} count={count} />
             ) : (
-              <a
-                href="#occupations"
+              <button
+                type="button"
                 onClick={onStartSelecting}
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black no-underline hover:brightness-110"
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 min-h-11 text-sm font-bold text-black hover:brightness-110"
               >
                 Select target jobs →
-              </a>
+              </button>
             )}
             <button
               type="button"
