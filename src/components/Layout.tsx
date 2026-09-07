@@ -2,14 +2,12 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { BrandMark } from './BrandMark'
 import { ThemeToggle } from './ThemeToggle'
+import { LETTER_URL } from '../lib/letterUrl'
 import { useAppPaths } from '../lib/useAppPaths'
 
 export function Layout({ children }: { children: ReactNode }) {
   const { home } = useAppPaths()
-  const letterUrl = (import.meta.env.VITE_LETTER_URL as string | undefined)?.replace(
-    /\/$/,
-    '',
-  )
+  const letterUrl = LETTER_URL
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip bg-page text-ink antialiased">

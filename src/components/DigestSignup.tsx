@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { LETTER_URL } from '../lib/letterUrl'
 
 export type DigestSignupProps = {
   industry?: string
@@ -10,7 +11,7 @@ export type DigestSignupProps = {
 type Status = 'idle' | 'sending' | 'sent' | 'skipped' | 'error'
 
 function letterBase(): string {
-  return (import.meta.env.VITE_LETTER_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+  return LETTER_URL
 }
 
 export function useLetterSubscribe({
