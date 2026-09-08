@@ -69,7 +69,7 @@ export function JoinSignupCard({
 
     const endpoint = `${LETTER_URL}/api/subscribe`
     try {
-      const res = await fetch(endpoint, {
+      await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -78,24 +78,13 @@ export function JoinSignupCard({
           lastName: last,
           name: `${first} ${last}`,
           linkedin: normalizeLinkedIn(linkedin),
+          linkedinUrl: normalizeLinkedIn(linkedin),
           sourceRef,
           reportUrl: reportUrl(),
         }),
       })
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
-        throw new Error(data.error ?? `request failed (${res.status})`)
-      }
-    } catch (err) {
-      if (err instanceof TypeError) {
-        onComplete()
-        return
-      }
-      setStatus('error')
-      setErrorMsg(
-        err instanceof Error ? err.message : 'Something went wrong. Try again.',
-      )
-      return
+    } catch {
+      /* persist is best-effort; never block the gate on mail delivery */
     }
     onComplete()
   }
