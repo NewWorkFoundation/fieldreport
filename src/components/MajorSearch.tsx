@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { Major } from '../types'
 import { useData } from '../data/DataContext'
 import { searchMajors } from '../lib/majorSearch'
@@ -25,6 +25,7 @@ export function MajorSearch({
   tone,
 }: MajorSearchProps) {
   const navigate = useNavigate()
+  const { search } = useLocation()
   const { isDark } = useTheme()
   const { unobviousByCip, unobviousByCip4, unobviousByCip2, crosswalk, occupationsBySoc } = useData()
   const resolvedTone = tone ?? (isDark ? 'dark' : 'light')
@@ -69,7 +70,8 @@ export function MajorSearch({
   }, [active])
 
   function select(major: Major) {
-    navigate(`${resultsBase}/${major.cip}`)
+    // Preserve the umbrella profile handoff so the signup gate can prefill it.
+    navigate(`${resultsBase}/${major.cip}${search}`)
     setQuery(major.name)
     setOpen(false)
   }

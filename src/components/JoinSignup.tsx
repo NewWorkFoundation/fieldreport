@@ -34,11 +34,13 @@ function reportUrl(): string {
   return window.location.href.split('#')[0] ?? window.location.href
 }
 
+function linkedinSlug(raw: string): string {
+  return raw.trim().replace(/^https?:\/\/(?:www\.)?linkedin\.com\/in\//i, '').replace(/^linkedin\.com\/in\//i, '').replace(/^\/+|\/+$/g, '')
+}
+
 function normalizeLinkedIn(raw: string): string | null {
-  const value = raw.trim()
-  if (!value) return null
-  if (/^https?:\/\//i.test(value)) return value
-  return `https://${value}`
+  const slug = linkedinSlug(raw)
+  return slug ? `https://www.linkedin.com/in/${slug}` : null
 }
 
 /** Shared Join dearCC card used by `/v2` interstitial and `/v3` modal. */
@@ -50,10 +52,14 @@ export function JoinSignupCard({
   onComplete: () => void
 }) {
   const id = useId()
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [linkedin, setLinkedin] = useState('')
+  const handoff = new URLSearchParams(
+    typeof window === 'undefined' ? '' : window.location.search,
+  )
+  const existingProfile = Boolean(handoff.get('leadId'))
+  const [firstName, setFirstName] = useState(() => handoff.get('first') ?? '')
+  const [lastName, setLastName] = useState(() => handoff.get('last') ?? '')
+  const [email, setEmail] = useState(() => handoff.get('email') ?? '')
+  const [linkedin, setLinkedin] = useState(() => linkedinSlug(handoff.get('linkedin') ?? ''))
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -66,6 +72,14 @@ export function JoinSignupCard({
 
     setStatus('sending')
     setErrorMsg(null)
+
+    // The umbrella signup already created the account and weekly subscription.
+    // This confirmation only unlocks the generated Field Report; the gate then
+    // records completion back on that canonical profile.
+    if (existingProfile) {
+      onComplete()
+      return
+    }
 
     const endpoint = `${LETTER_URL}/api/subscribe`
     try {
@@ -104,21 +118,22 @@ export function JoinSignupCard({
 
   return (
     <div
-      className="w-full max-w-[28rem] rounded-xl bg-white p-8 shadow-lg sm:p-10"
+      className="w-full max-w-[28rem] rounded-xl bg-white p-6 shadow-lg sm:p-8"
       style={{ colorScheme: 'light' }}
     >
       <h1
         id={`${id}-title`}
-        className="font-sans text-3xl font-bold tracking-tight text-black sm:text-[2rem]"
+        className="text-center font-sans text-3xl font-bold tracking-tight text-black"
       >
         Join dearCC
       </h1>
-      <p id={`${id}-copy`} className="mt-2 text-[15px] leading-relaxed text-[#5c5c5c]">
-        Sign up to view the results, it is completely free!
+      <p id={`${id}-copy`} className="mx-auto mt-2 max-w-[34ch] text-center text-[15px] leading-relaxed text-[#5c5c5c]">
+        Create one free profile to save this report and continue to your game plan.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+      <form onSubmit={onSubmit} className="mt-7 space-y-3">
+        <div className="overflow-hidden rounded-xl bg-[#f1f1f1]">
+        <div className="grid grid-cols-2 gap-3 border-b border-black/10 px-4 py-3.5">
           <Field
             id={`${id}-first`}
             label="First name"
@@ -136,7 +151,7 @@ export function JoinSignupCard({
             disabled={sending}
           />
         </div>
-        <Field
+        <div className="border-b border-black/10 px-4 py-3.5"><Field
           id={`${id}-email`}
           label="Email"
           type="email"
@@ -145,25 +160,24 @@ export function JoinSignupCard({
           value={email}
           onChange={setEmail}
           disabled={sending}
-        />
-        <Field
-          id={`${id}-linkedin`}
-          label="LinkedIn profile URL"
-          autoComplete="url"
-          inputMode="url"
-          placeholder="https://linkedin.com/in/..."
-          value={linkedin}
-          onChange={setLinkedin}
-          disabled={sending}
-          required={false}
-        />
+        /></div>
+        <div className="px-4 py-3.5">
+          <label htmlFor={`${id}-linkedin`} className="mb-1.5 block text-[13px] font-semibold text-black">LinkedIn profile <span className="font-normal text-[#5c5c5c]">(optional)</span></label>
+          <div className="flex items-baseline text-[15px] text-[#5c5c5c]">
+            <span aria-hidden>linkedin.com/in/</span>
+            <input id={`${id}-linkedin`} name={`${id}-linkedin`} type="text" value={linkedin} onChange={(event) => setLinkedin(event.target.value)} disabled={sending} placeholder="your-profile" className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-black outline-none placeholder:text-[#9a9a9a] disabled:opacity-60" />
+          </div>
+        </div>
+        </div>
 
         <button
           type="submit"
           disabled={sending}
-          className="mt-2 flex w-full items-center justify-center rounded-lg bg-[#ff5a3d] px-4 py-3.5 text-base font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="flex w-full items-center justify-center rounded-lg bg-black px-4 py-3.5 text-base font-bold text-white transition-colors hover:bg-[#ff5a3d] hover:text-black disabled:opacity-60"
         >
-          {sending ? 'Creating account…' : 'Create my account →'}
+          {sending
+            ? existingProfile ? 'Opening report…' : 'Creating account…'
+            : existingProfile ? 'View my report →' : 'Create my account →'}
         </button>
       </form>
 
@@ -203,7 +217,7 @@ function Field({
     <div>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-[13px] font-semibold text-[#3a3a3a]"
+        className="mb-1 block text-[13px] font-semibold text-black"
       >
         {label}
       </label>
@@ -218,7 +232,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full rounded-md border border-[#d4d4d4] bg-white px-3 py-2.5 text-[15px] text-black placeholder:text-[#9a9a9a] outline-none transition-colors focus:border-black disabled:opacity-60"
+        className="w-full border-0 bg-transparent p-0 text-[15px] text-black placeholder:text-[#9a9a9a] outline-none disabled:opacity-60"
       />
     </div>
   )

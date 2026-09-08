@@ -7,10 +7,15 @@ import {
   hasSignup,
   markSignup,
 } from './JoinSignup'
+import { useFieldReportProfileProgress } from '../lib/profileProgress'
 
 /** Renders `/v3` results underneath a signup modal so the report is visible but unreadable. */
 export function V3SignupGate({ children }: { children: ReactNode }) {
-  const [unlocked, setUnlocked] = useState(() => hasSignup(V3_SIGNUP_KEY))
+  const [unlocked, setUnlocked] = useState(() => {
+    const handoff = new URLSearchParams(window.location.search)
+    return hasSignup(V3_SIGNUP_KEY) || Boolean(handoff.get('leadId'))
+  })
+  useFieldReportProfileProgress(unlocked)
 
   useEffect(() => {
     if (unlocked) return

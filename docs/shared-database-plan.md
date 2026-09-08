@@ -1,0 +1,34 @@
+# Shared database plan
+
+## Intended boundary
+
+Field Report is part of the shared dear-cc product database design, but it
+does not connect to Postgres directly and has no tables to migrate. It records
+its completion state by calling dear-cc's authenticated
+`/api/profile/progress` endpoint. dear-cc stores that state in its canonical
+`leads` profile record.
+
+Gameplan will use the same production Postgres/Neon host as dear-cc, while
+continuing to own separate Gameplan tables. This does not merge user accounts
+or authentication across products.
+
+## What remains before cutover
+
+1. No `DATABASE_URL` is needed in Field Report.
+2. In each deployed environment, set `DEARCC_PROFILE_URL` to the matching
+   dear-cc deployment and set the same `PROFILE_SYNC_SECRET` there and in
+   dear-cc. Keep the secret out of Git.
+3. After dear-cc and Gameplan share their production database, test a complete
+   Field Report flow and confirm the profile-progress request succeeds.
+4. Verify the selected target roles and `field_report_completed_at` are saved
+   on the matching dear-cc `leads` record.
+
+The Field Report milestone means the user has unlocked and viewed a results
+route. Selecting roles or merely following the outbound link does not complete
+it. The relay includes the handoff email when available so dear-cc can verify
+that the `leadId` belongs to the same profile.
+
+## Safety boundary
+
+Field Report must keep using the relay rather than exposing a database URL or
+database credentials to the Vite client.
