@@ -52,8 +52,8 @@ type TableSort = Extract<
 >
 
 const SORT_CHIPS: { field: Exclude<TableSort, 'title'>; label: string }[] = [
-  { field: 'entrySalary', label: 'Entry salary' },
-  { field: 'openPositions', label: 'Openings' },
+  { field: 'entrySalary', label: 'Entry-level salary' },
+  { field: 'openPositions', label: 'Job openings' },
   { field: 'graduatesPerOpening', label: 'Competition' },
   { field: 'karpathyExposure', label: 'AI exposure' },
   { field: 'entryBarrier', label: 'Entry barrier' },
@@ -68,13 +68,13 @@ const COLUMNS: {
   { field: 'title', label: 'Occupation' },
   {
     field: 'entrySalary',
-    label: 'Entry salary',
+    label: 'Entry-level salary (average)',
     className: 'text-right',
-    why: '25th percentile wage from BLS May 2024 OEWS. Median wage is shown underneath.',
+    why: 'We infer entry-level pay from the BLS 25th-percentile wage (May 2024 OEWS), because BLS does not split wages by experience. Median wage is shown underneath.',
   },
   {
     field: 'openPositions',
-    label: 'Openings',
+    label: 'Job openings',
     className: 'text-right',
     why: 'Annual job openings from BLS — includes both new positions and replacements for workers who retire or change careers. Default sort puts accelerating employment ahead of declining, then BLS projected growth (2024–2034), then opening count. The sparkline is the inflation-adjusted entry wage from 2021 to 2025.',
   },
@@ -171,6 +171,7 @@ export function ResultsPage() {
   const [sortField, setSortField] = useState<TableSort>('openPositions')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedSocs, setSelectedSocs] = useState<Set<string>>(() => new Set())
+  const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(() => new Set())
   const [selectingJobs, setSelectingJobs] = useState(false)
 
   useEffect(() => {
@@ -178,6 +179,7 @@ export function ResultsPage() {
     setSortField('openPositions')
     setSortDirection('desc')
     setSelectedSocs(new Set())
+    setSelectedOrphans(new Set())
     setSelectingJobs(false)
   }, [cipCode])
 
@@ -262,10 +264,15 @@ export function ResultsPage() {
     return list
   }, [visible, sortField, sortDirection, aiImpactBySoc, wageTrendBySoc, altSocs])
 
-  const selectedRoles = useMemo(
-    () => sorted.filter((o) => selectedSocs.has(o.soc)).map((o) => sentenceCase(o.title)),
-    [sorted, selectedSocs],
-  )
+  const selectedRoles = useMemo(() => {
+    const fromOccs = sorted
+      .filter((o) => selectedSocs.has(o.soc))
+      .map((o) => sentenceCase(o.title))
+    const fromOrphans = orphanJobs
+      .filter((job) => selectedOrphans.has(job.title))
+      .map((job) => job.title)
+    return [...fromOccs, ...fromOrphans]
+  }, [sorted, selectedSocs, orphanJobs, selectedOrphans])
 
   function toggleSoc(soc: string) {
     setSelectedSocs((prev) => {
@@ -276,14 +283,35 @@ export function ResultsPage() {
     })
   }
 
+  function toggleOrphan(title: string) {
+    setSelectedOrphans((prev) => {
+      const next = new Set(prev)
+      if (next.has(title)) next.delete(title)
+      else next.add(title)
+      return next
+    })
+  }
+
   function toggleAllVisible() {
+    const occsAllOn = sorted.length > 0 && sorted.every((o) => selectedSocs.has(o.soc))
+    const orphansAllOn =
+      orphanJobs.length === 0 || orphanJobs.every((job) => selectedOrphans.has(job.title))
+    const allOn = occsAllOn && orphansAllOn && sorted.length + orphanJobs.length > 0
     setSelectedSocs((prev) => {
-      const allOn = sorted.length > 0 && sorted.every((o) => prev.has(o.soc))
       const next = new Set(prev)
       if (allOn) {
         for (const o of sorted) next.delete(o.soc)
       } else {
         for (const o of sorted) next.add(o.soc)
+      }
+      return next
+    })
+    setSelectedOrphans((prev) => {
+      const next = new Set(prev)
+      if (allOn) {
+        for (const job of orphanJobs) next.delete(job.title)
+      } else {
+        for (const job of orphanJobs) next.add(job.title)
       }
       return next
     })
@@ -368,31 +396,41 @@ export function ResultsPage() {
           {stats && <TldrCard majorName={displayName} stats={stats} />}
 
           {stats && (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              <MetricCard
-                label="Projected openings"
-                value={formatCompactCount(stats.totalOpenings)}
-                sublabel={`per year · ${formatSignedCompactCount(stats.jobsIncrease)} jobs by 2034`}
-                spark={
-                  <JobsArrow
-                    now={stats.employmentNow}
-                    later={stats.employmentNow + stats.jobsIncrease}
-                  />
-                }
-              />
-              <MetricCard
-                label="Entry salary"
-                value={formatSalaryK(stats.avgSalary)}
-                mark="→"
-                sublabel="25th percentile · BLS, averaged"
-              />
-              <MetricCard
-                label="Competition"
-                value={
-                  stats.avgCompetition == null ? 'N/A' : `${stats.avgCompetition.toFixed(1)}×`
-                }
-                sublabel="grads per opening, weighted"
-              />
+            <div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <MetricCard
+                  label="Projected openings"
+                  value={formatCompactCount(stats.totalOpenings)}
+                  sublabel={`per year · ${formatSignedCompactCount(stats.jobsIncrease)} jobs by 2034`}
+                  spark={
+                    <JobsArrow
+                      now={stats.employmentNow}
+                      later={stats.employmentNow + stats.jobsIncrease}
+                    />
+                  }
+                />
+                <MetricCard
+                  label="Entry-level salary (average)"
+                  value={formatSalaryK(stats.avgSalary)}
+                  mark="→"
+                  footnote={{ id: 'entry-salary-method', mark: '1' }}
+                />
+                <MetricCard
+                  label="Competition"
+                  value={
+                    stats.avgCompetition == null ? 'N/A' : `${stats.avgCompetition.toFixed(1)}×`
+                  }
+                  sublabel="grads per opening, weighted"
+                />
+              </div>
+              <p
+                id="entry-salary-method"
+                className="mt-3 text-xs text-muted leading-relaxed max-w-3xl"
+              >
+                <sup>1</sup> Entry-level salary is inferred from the BLS 25th-percentile
+                wage, then averaged across occupations on this page. BLS does not publish
+                wages by years of experience.
+              </p>
             </div>
           )}
         </div>
@@ -420,7 +458,9 @@ export function ResultsPage() {
         aiImpactBySoc={aiImpactBySoc}
         wageTrendBySoc={wageTrendBySoc}
         selectedSocs={selectedSocs}
+        selectedOrphans={selectedOrphans}
         onToggleSoc={toggleSoc}
+        onToggleOrphan={toggleOrphan}
         onToggleAll={toggleAllVisible}
         selecting={selectingJobs}
       />
@@ -475,17 +515,28 @@ function MetricCard({
   sublabel,
   mark,
   spark,
+  footnote,
 }: {
   label: string
   value: string
   sublabel?: string
   mark?: string
   spark?: ReactNode
+  footnote?: { id: string; mark: string }
 }) {
   return (
     <div className="border border-border rounded-lg p-3 sm:p-5 min-w-0">
       <div className="text-[10px] sm:text-xs text-muted font-medium uppercase tracking-wider mb-1.5 sm:mb-2 leading-tight">
         <KeepBeta>{label}</KeepBeta>
+        {footnote ? (
+          <a
+            href={`#${footnote.id}`}
+            className="ml-0.5 normal-case tracking-normal text-muted hover:text-ink no-underline"
+            aria-label={`Footnote ${footnote.mark}: how entry-level salary is inferred`}
+          >
+            <sup>{footnote.mark}</sup>
+          </a>
+        ) : null}
       </div>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
@@ -683,7 +734,7 @@ function GameplanCta({
 function AdjacencyChip() {
   return (
     <span className="inline-flex items-center rounded-full bg-adjacency/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-adjacency">
-      Adjacency
+      Emerging career pathway
     </span>
   )
 }
@@ -730,9 +781,7 @@ function OccupationName({
       ) : null}
       {soc ? (
         <div className="text-[11px] text-muted mt-0.5 font-mono">SOC {soc}</div>
-      ) : (
-        <div className="text-[11px] text-muted mt-0.5">Editorial pick · no SOC match</div>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -905,18 +954,38 @@ function OccupancyRow({
   )
 }
 
-function OrphanRow({ job }: { job: UnobviousJob }) {
+function OrphanRow({
+  job,
+  selected,
+  onToggle,
+  selecting,
+}: {
+  job: UnobviousJob
+  selected: boolean
+  onToggle: () => void
+  selecting: boolean
+}) {
   return (
     <tr
       className={adjacentRowClass({
         isAdjacent: true,
-        selecting: false,
-        selected: false,
+        selecting,
+        selected,
         isRelevant: false,
       })}
+      onClick={selecting ? onToggle : undefined}
     >
       <td className="px-3 py-3 align-top">
-        <OccupationName title={job.title} why={job.why} isAdjacent />
+        <div className="flex items-start gap-3">
+          {selecting ? (
+            <JobCheck
+              checked={selected}
+              label={`Select ${job.title}`}
+              onToggle={onToggle}
+            />
+          ) : null}
+          <OccupationName title={job.title} why={job.why} isAdjacent />
+        </div>
       </td>
       <TooNewCell colSpan={METRIC_COL_COUNT + 1} />
     </tr>
@@ -937,7 +1006,9 @@ function OccupationTable({
   aiImpactBySoc,
   wageTrendBySoc,
   selectedSocs,
+  selectedOrphans,
   onToggleSoc,
+  onToggleOrphan,
   onToggleAll,
   selecting,
 }: {
@@ -954,12 +1025,17 @@ function OccupationTable({
   aiImpactBySoc: Map<string, AiImpactScore>
   wageTrendBySoc: Map<string, EntryWageTrend>
   selectedSocs: Set<string>
+  selectedOrphans: Set<string>
   onToggleSoc: (soc: string) => void
+  onToggleOrphan: (title: string) => void
   onToggleAll: () => void
   selecting: boolean
 }) {
-  const selectedCount = occupations.filter((o) => selectedSocs.has(o.soc)).length
-  const allSelected = occupations.length > 0 && selectedCount === occupations.length
+  const selectedCount =
+    occupations.filter((o) => selectedSocs.has(o.soc)).length +
+    orphanJobs.filter((job) => selectedOrphans.has(job.title)).length
+  const selectableCount = occupations.length + orphanJobs.length
+  const allSelected = selectableCount > 0 && selectedCount === selectableCount
   const someSelected = selectedCount > 0 && !allSelected
   const displayRows = tableDisplayRows(occupations, orphanJobs, newPathSocs)
 
@@ -1044,7 +1120,13 @@ function OccupationTable({
       <div className="lg:hidden space-y-3">
         {displayRows.map((row) =>
           row.kind === 'orphan' ? (
-            <OrphanCard key={row.key} job={row.job} />
+            <OrphanCard
+              key={row.key}
+              job={row.job}
+              selected={selectedOrphans.has(row.job.title)}
+              onToggle={() => onToggleOrphan(row.job.title)}
+              selecting={selecting}
+            />
           ) : (
             occCard(row.occ)
           ),
@@ -1099,7 +1181,13 @@ function OccupationTable({
           <tbody>
             {displayRows.map((row) =>
               row.kind === 'orphan' ? (
-                <OrphanRow key={row.key} job={row.job} />
+                <OrphanRow
+                  key={row.key}
+                  job={row.job}
+                  selected={selectedOrphans.has(row.job.title)}
+                  onToggle={() => onToggleOrphan(row.job.title)}
+                  selecting={selecting}
+                />
               ) : (
                 occRow(row.occ)
               ),
@@ -1175,14 +1263,14 @@ function OccCard({
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div>
-          <span className="text-muted text-xs">Entry salary</span>
+          <span className="text-muted text-xs">Entry-level salary (average)</span>
           <div className="font-mono tabular-nums text-ink font-medium">
             {formatSalary(occ.entrySalary)}
           </div>
           <div className="text-[11px] text-muted">median {formatSalary(occ.medianSalary)}</div>
         </div>
         <div>
-          <span className="text-muted text-xs">Openings</span>
+          <span className="text-muted text-xs">Job openings</span>
           <div className="font-mono tabular-nums text-openings">{formatNumber(occ.openPositions)}</div>
           <WageSparkline trend={wageTrend} align="start" />
         </div>
@@ -1212,10 +1300,30 @@ function OccCard({
   )
 }
 
-function OrphanCard({ job }: { job: UnobviousJob }) {
+function OrphanCard({
+  job,
+  selected,
+  onToggle,
+  selecting,
+}: {
+  job: UnobviousJob
+  selected: boolean
+  onToggle: () => void
+  selecting: boolean
+}) {
   return (
-    <div className="rounded-lg border border-border bg-adjacency/[0.08] p-4">
-      <OccupationName title={job.title} why={job.why} isAdjacent />
+    <div
+      className={`rounded-lg border p-4 ${selecting ? 'cursor-pointer' : ''} ${
+        selected ? 'border-primary bg-primary/5' : 'border-border bg-adjacency/[0.08]'
+      }`}
+      onClick={selecting ? onToggle : undefined}
+    >
+      <div className="flex items-start gap-3">
+        {selecting ? (
+          <JobCheck checked={selected} label={job.title} onToggle={onToggle} />
+        ) : null}
+        <OccupationName title={job.title} why={job.why} isAdjacent />
+      </div>
       <p className="mt-3 text-sm text-muted">{TOO_NEW_TO_CALCULATE}</p>
     </div>
   )
@@ -1421,11 +1529,11 @@ function SeverityLegend() {
 
 const COLUMN_DEFINITIONS = [
   {
-    term: 'Entry salary',
-    body: '25th percentile of all wages in the occupation (BLS), a proxy for entry pay. BLS does not split wages by experience.',
+    term: 'Entry-level salary (average)',
+    body: 'Inferred from the BLS 25th-percentile wage, a proxy for entry pay because BLS does not split wages by experience. The summary figure averages those entry wages across occupations on this page. Median wage is shown underneath each row.',
   },
   {
-    term: 'Openings',
+    term: 'Job openings',
     body: 'Average openings expected per year through 2034, including replacement hires as people retire or change fields, not just newly created jobs (BLS). The sparkline is the occupation’s inflation-adjusted entry wage from 2021 to 2025, not openings over time.',
   },
   {
