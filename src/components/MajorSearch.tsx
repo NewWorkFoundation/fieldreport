@@ -13,6 +13,8 @@ interface MajorSearchProps {
   /** Base path for results, e.g. `/results` or `/v2/results` */
   resultsBase?: string
   placeholder?: string
+  /** Noun used in the empty-results line, e.g. "majors" or "degrees". */
+  noMatchNoun?: string
   tone?: 'light' | 'dark'
 }
 
@@ -22,6 +24,7 @@ export function MajorSearch({
   autoFocus = false,
   resultsBase = '/results',
   placeholder = 'Search your major',
+  noMatchNoun = 'majors',
   tone,
 }: MajorSearchProps) {
   const navigate = useNavigate()
@@ -222,7 +225,7 @@ export function MajorSearch({
             })
           ) : showEmpty ? (
             <li className="px-4 py-4 text-sm text-muted" role="presentation">
-              No majors match “{query.trim()}”. Try a broader term — e.g. Biology,
+              No {noMatchNoun} match “{query.trim()}”. Try a broader term — e.g. Biology,
               Nursing, or Economics.
             </li>
           ) : null}
