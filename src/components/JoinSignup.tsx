@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { LETTER_URL } from '../lib/letterUrl'
+import { SUBSCRIBE_URL } from '../lib/subscribe'
 
 export const V2_SIGNUP_KEY = 'fr-v2-signup'
 export const V3_SIGNUP_KEY = 'fr-v3-signup'
@@ -67,9 +67,8 @@ export function JoinSignupCard({
     setStatus('sending')
     setErrorMsg(null)
 
-    const endpoint = `${LETTER_URL}/api/subscribe`
     try {
-      await fetch(endpoint, {
+      await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

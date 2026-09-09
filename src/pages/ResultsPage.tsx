@@ -30,7 +30,7 @@ import {
 } from '../lib/labels'
 import { isRealMajor, majorDisplayName } from '../lib/majorName'
 import { newPathSocs, pathForCip } from '../lib/unobviousPaths'
-import { QuietEmailForm, useLetterSubscribe } from '../components/DigestSignup'
+import { QuietEmailForm, useSubscribe } from '../components/DigestSignup'
 import { useAppPaths } from '../lib/useAppPaths'
 import type {
   AiImpactScore,
@@ -616,7 +616,7 @@ function EmailReportAction({
   open: boolean
   onOpen: () => void
   idPrefix: string
-  subscribe: ReturnType<typeof useLetterSubscribe>
+  subscribe: ReturnType<typeof useSubscribe>
   autoFocus?: boolean
 }) {
   if (open) {
@@ -649,7 +649,7 @@ function GameplanCta({
   const inFlowRef = useRef<HTMLDivElement>(null)
   const [docked, setDocked] = useState(false)
   const [emailOpen, setEmailOpen] = useState(false)
-  const subscribe = useLetterSubscribe({
+  const subscribe = useSubscribe({
     industry: title,
     role: selectedRoles[0] ?? title,
     focusAreas: selectedRoles.length ? selectedRoles : [title],

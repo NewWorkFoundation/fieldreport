@@ -10,11 +10,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The Results email CTA posts to `${VITE_LETTER_URL}/api/subscribe` (CORS enabled on that site). That enrolls the address in the weekly newsletter and emails a link to the current report.
+The Results email CTA and signup forms POST to `/api/subscribe` on this app (Resend, `RESEND_API_KEY`). That emails a link to the current report. Preview and send the same template at `/dev/emails`.
 
 ## Deploy
 
-- **Vercel** — import [skyspeak/fieldreport](https://github.com/skyspeak/fieldreport); set `VITE_LETTER_URL`.
+- **Vercel** — import [skyspeak/fieldreport](https://github.com/skyspeak/fieldreport); set `RESEND_API_KEY`.
 - **GitHub Pages** — Actions build with `GITHUB_PAGES=true` (base `/fieldreport/`).
 
 ## Stack

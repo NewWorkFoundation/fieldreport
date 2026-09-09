@@ -10,6 +10,7 @@ export function Layout({ children }: { children: ReactNode }) {
   if (pathname === '/graphic' || pathname.endsWith('/graphic')) {
     return <>{children}</>
   }
+  const emailLab = pathname === '/dev/emails' || pathname.endsWith('/dev/emails')
 
   return (
     <div className="min-h-screen flex flex-col overflow-x-clip bg-page text-ink antialiased">
@@ -33,6 +34,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 min-w-0">{children}</main>
 
+      {!emailLab ? (
       <footer className="border-t border-border mt-auto pb-[env(safe-area-inset-bottom)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col gap-3 text-xs text-muted">
@@ -78,6 +80,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
+      ) : null}
     </div>
   )
 }

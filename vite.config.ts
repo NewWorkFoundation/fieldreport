@@ -6,16 +6,30 @@ import tailwindcss from '@tailwindcss/vite'
 import { v3ApiPlugin } from './server/v3Api.mjs'
 // @ts-expect-error — no .d.ts for server/*.mjs under nodenext
 import { v4ApiPlugin } from './server/v4Api.mjs'
+// @ts-expect-error — no .d.ts for server/*.mjs under nodenext
+import { subscribeApiPlugin } from './server/subscribeApi.mjs'
 
 export default defineConfig(({ mode }) => {
   // Expose AOI_* to the Vite Node process (API plugin), not to the browser.
   const env = loadEnv(mode, process.cwd(), '')
-  for (const key of ['AOI_USERNAME', 'AOI_PASSWORD', 'AOI_BASE_URL']) {
+  for (const key of [
+    'AOI_USERNAME',
+    'AOI_PASSWORD',
+    'AOI_BASE_URL',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
+  ]) {
     if (env[key] && !process.env[key]) process.env[key] = env[key]
   }
 
   return {
     base: process.env.GITHUB_PAGES === 'true' ? '/fieldreport/' : '/',
-    plugins: [react(), tailwindcss(), v3ApiPlugin(), v4ApiPlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      v3ApiPlugin(),
+      v4ApiPlugin(),
+      subscribeApiPlugin(),
+    ],
   }
 })

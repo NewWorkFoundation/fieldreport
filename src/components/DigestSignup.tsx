@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { LETTER_URL } from '../lib/letterUrl'
+import { SUBSCRIBE_URL } from '../lib/subscribe'
 
 export type DigestSignupProps = {
   industry?: string
@@ -11,10 +11,6 @@ export type DigestSignupProps = {
 }
 
 type Status = 'idle' | 'sending' | 'sent' | 'skipped' | 'error'
-
-function subscribeUrl(): string {
-  return `${LETTER_URL}/api/subscribe`
-}
 
 function currentReportUrl(): string {
   if (typeof window === 'undefined') return ''
@@ -30,7 +26,7 @@ function currentReportUrl(): string {
   return window.location.href.split('#')[0] ?? window.location.href
 }
 
-export function useLetterSubscribe({
+export function useSubscribe({
   industry,
   role,
   focusAreas,
@@ -40,21 +36,15 @@ export function useLetterSubscribe({
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  const endpoint = subscribeUrl()
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!email.trim()) return
-    if (!endpoint) {
-      setStatus('error')
-      setErrorMsg("Couldn't send this right now. Try again in a minute.")
-      return
-    }
     setStatus('sending')
     setErrorMsg(null)
     try {
       const reportUrl = includeReport ? currentReportUrl() : null
-      const res = await fetch(endpoint, {
+      const res = await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,13 +71,13 @@ export function useLetterSubscribe({
     }
   }
 
-  return { email, setEmail, status, errorMsg, base: LETTER_URL, onSubmit }
+  return { email, setEmail, status, errorMsg, onSubmit }
 }
 
 type QuietEmailFormProps = {
   idPrefix?: string
   autoFocus?: boolean
-} & ReturnType<typeof useLetterSubscribe>
+} & ReturnType<typeof useSubscribe>
 
 /** Unbranded email + Send capture. Subscribes without naming the product. */
 export function QuietEmailForm({
@@ -103,7 +93,7 @@ export function QuietEmailForm({
     return (
       <p role="status" aria-live="polite" className="text-sm text-ink">
         {status === 'skipped' ? 'Already sent.' : 'Sent.'} Check {email} for the
-        report — you are on the weekly list.
+        report.
       </p>
     )
   }
@@ -149,7 +139,7 @@ export function DigestSignup({
   focusAreas,
   sourceRef,
 }: DigestSignupProps) {
-  const { email, setEmail, status, errorMsg, base, onSubmit } = useLetterSubscribe({
+  const { email, setEmail, status, errorMsg, onSubmit } = useSubscribe({
     industry,
     role,
     focusAreas,
@@ -179,14 +169,6 @@ export function DigestSignup({
           <p className="mt-1 text-sm text-muted">
             Check <span className="text-ink">{email}</span> for your first update.
           </p>
-          {base && (
-            <a
-              href={base}
-              className="mt-4 inline-flex w-full sm:w-auto justify-center rounded-lg bg-ink px-4 py-3 text-sm font-bold text-page hover:bg-primary hover:text-ink transition-colors min-h-11"
-            >
-              Open NEXT →
-            </a>
-          )}
         </div>
       ) : (
         <form onSubmit={onSubmit} className="mt-8 flex flex-col sm:flex-row gap-3 max-w-lg">

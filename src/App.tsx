@@ -4,6 +4,7 @@ import { Layout } from './components/Layout'
 import { V2SignupGate } from './components/V2SignupGate'
 import { V3SignupGate } from './components/V3SignupGate'
 import { ThemeProvider } from './lib/theme'
+import { EmailLabPage } from './pages/EmailLabPage'
 import { HomePage } from './pages/HomePage'
 import { DeadFieldGraphic } from './pages/DeadFieldGraphic'
 import { ResultsPage } from './pages/ResultsPage'
@@ -40,6 +41,7 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/dev/emails" element={<EmailLabPage />} />
               <Route path="/graphic" element={<DeadFieldGraphic />} />
               <Route path="/receipts" element={<V3ReceiptsPage />} />
               <Route path="/results/:cipCode" element={<ResultsPage />} />
