@@ -18,6 +18,8 @@ import { V4HomePage } from './pages/v4/V4HomePage'
 import { V4AtlasPage } from './pages/v4/V4AtlasPage'
 import { V4ResultsPage } from './pages/v4/V4ResultsPage'
 import { V4FootprintPage } from './pages/v4/V4FootprintPage'
+import { RolePickerPage } from './pages/RolePickerPage'
+import { RoleReportPage } from './pages/RoleReportPage'
 import {
   V4BadgesPage,
   V4ComparePage,
@@ -113,6 +115,8 @@ export default function App() {
               {/* /v3 is the current product with a signup modal over blurred results */}
               <Route path="/v3" element={<HomePage />} />
               <Route path="/v3/receipts" element={<V3ReceiptsPage />} />
+              <Route path="/v3/roles" element={<RolePickerPage />} />
+              <Route path="/v3/roles/report" element={<V3SignupGate><RoleReportPage /></V3SignupGate>} />
               <Route
                 path="/v3/results/:cipCode"
                 element={

@@ -6,10 +6,12 @@ import {
   hasSignup,
   markSignup,
 } from './JoinSignup'
+import { useFieldReportProfileProgress } from '../lib/profileProgress'
 
 /** Blocks `/v2` results until the visitor creates a free account. */
 export function V2SignupGate({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState(() => hasSignup(V2_SIGNUP_KEY))
+  useFieldReportProfileProgress(unlocked)
 
   if (unlocked) return children
 

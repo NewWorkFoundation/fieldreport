@@ -16,3 +16,5 @@ skills-lock.json
 !.vscode/extensions.json
 .idea
 .DS_Store
+.vercel
+.env*.local

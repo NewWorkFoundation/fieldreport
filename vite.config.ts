@@ -7,6 +7,8 @@ import { v3ApiPlugin } from './server/v3Api.mjs'
 // @ts-expect-error — no .d.ts for server/*.mjs under nodenext
 import { v4ApiPlugin } from './server/v4Api.mjs'
 // @ts-expect-error — no .d.ts for server/*.mjs under nodenext
+import { profileProgressApiPlugin } from './server/profileProgressApi.mjs'
+// @ts-expect-error — no .d.ts for server/*.mjs under nodenext
 import { subscribeApiPlugin } from './server/subscribeApi.mjs'
 
 export default defineConfig(({ mode }) => {
@@ -16,6 +18,8 @@ export default defineConfig(({ mode }) => {
     'AOI_USERNAME',
     'AOI_PASSWORD',
     'AOI_BASE_URL',
+    'DEARCC_PROFILE_URL',
+    'PROFILE_SYNC_SECRET',
     'RESEND_API_KEY',
     'RESEND_FROM_EMAIL',
   ]) {
@@ -29,6 +33,7 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       v3ApiPlugin(),
       v4ApiPlugin(),
+      profileProgressApiPlugin(),
       subscribeApiPlugin(),
     ],
   }
