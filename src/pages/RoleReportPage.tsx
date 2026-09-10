@@ -19,7 +19,7 @@ function exposureLabel(value: number | null) {
 }
 
 export function RoleReportPage() {
-  const { occupations, aiImpactBySoc, loading } = useData()
+  const { occupations, aiImpactBySoc, loading, error } = useData()
   const { mapBase } = useAppPaths()
   const [params] = useSearchParams()
   const fromChecklist = params.get('checklist') === '1'
@@ -28,11 +28,17 @@ export function RoleReportPage() {
     const next = new URLSearchParams(params)
     next.delete('roleSoc')
     next.delete('role')
-    next.set('roles', selected.map((role) => sentenceCase(role.title)).join(','))
+    const profileRoles = (next.get('profileRoles') ?? '').split(';').map((role) => role.trim()).filter(Boolean)
+    next.delete('profileRoles')
+    const combinedRoles = [...profileRoles, ...selected.map((role) => sentenceCase(role.title))]
+      .filter((role, index, roles) => roles.findIndex((candidate) => candidate.toLowerCase() === role.toLowerCase()) === index)
+      .slice(0, 6)
+    next.set('roles', combinedRoles.join(';'))
     return `${GAMEPLAN_URL}/?${next.toString()}`
   }, [params, selected])
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-muted">Loading your report…</div>
+  if (!selected.length && params.has('roleSoc') && error) return <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center"><h1 className="text-3xl font-bold text-ink">Your saved report is still here</h1><p className="mt-3 text-muted">The role catalog didn’t finish loading. Retry without choosing your roles again.</p><button type="button" onClick={() => window.location.reload()} className="mt-6 rounded-lg bg-black px-5 py-3 text-sm font-bold text-white">Retry report →</button></main>
   if (!selected.length) return <main className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 text-center"><h1 className="text-3xl font-bold text-ink">Choose roles for your report</h1><p className="mt-3 text-muted">Your report needs at least one target role.</p><Link to={`/v3/roles?${params.toString()}`} className="mt-6 rounded-lg bg-black px-5 py-3 text-sm font-bold text-white no-underline">Choose roles →</Link></main>
 
   const first = selected[0]

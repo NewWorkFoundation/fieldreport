@@ -20,6 +20,7 @@ import { V4ResultsPage } from './pages/v4/V4ResultsPage'
 import { V4FootprintPage } from './pages/v4/V4FootprintPage'
 import { RolePickerPage } from './pages/RolePickerPage'
 import { RoleReportPage } from './pages/RoleReportPage'
+import { DearccProfileHandoff } from './components/DearccProfileHandoff'
 import {
   V4BadgesPage,
   V4ComparePage,
@@ -39,6 +40,7 @@ export default function App() {
   return (
     <DataProvider>
       <BrowserRouter basename={basename}>
+        <DearccProfileHandoff />
         <ThemeProvider>
           <Layout>
             <Routes>

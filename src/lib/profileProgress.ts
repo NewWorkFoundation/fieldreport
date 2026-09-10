@@ -19,23 +19,19 @@ export function useFieldReportProfileProgress(unlocked: boolean) {
   useEffect(() => {
     if (!unlocked || !leadId || !UUID.test(leadId)) return
 
-    const controller = new AbortController()
     void fetch('/api/profile-progress', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ leadId, ...(email ? { email } : {}), targetRoles }),
-      signal: controller.signal,
+      keepalive: true,
     })
       .then((response) => {
         if (!response.ok) {
           console.warn(`Could not sync dearCC profile progress (${response.status})`)
         }
       })
-      .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === 'AbortError') return
+      .catch(() => {
         console.warn('Could not sync dearCC profile progress')
       })
-
-    return () => controller.abort()
   }, [email, leadId, targetRoles, unlocked])
 }

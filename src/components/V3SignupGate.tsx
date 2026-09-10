@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useSearchParams } from 'react-router-dom'
 import { DocumentMeta } from './DocumentMeta'
 import {
   JoinSignupCard,
@@ -11,14 +12,16 @@ import { useFieldReportProfileProgress } from '../lib/profileProgress'
 
 /** Renders `/v3` results underneath a signup modal so the report is visible but unreadable. */
 export function V3SignupGate({ children }: { children: ReactNode }) {
+  const [searchParams] = useSearchParams()
   const [unlocked, setUnlocked] = useState(() => {
     const handoff = new URLSearchParams(window.location.search)
     return hasSignup(V3_SIGNUP_KEY) || Boolean(handoff.get('leadId'))
   })
-  useFieldReportProfileProgress(unlocked)
+  const profileUnlocked = unlocked || Boolean(searchParams.get('leadId'))
+  useFieldReportProfileProgress(profileUnlocked)
 
   useEffect(() => {
-    if (unlocked) return
+    if (profileUnlocked) return
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const layout = document.getElementById('root')?.firstElementChild
@@ -27,9 +30,9 @@ export function V3SignupGate({ children }: { children: ReactNode }) {
       document.body.style.overflow = prevOverflow
       layout?.removeAttribute('inert')
     }
-  }, [unlocked])
+  }, [profileUnlocked])
 
-  if (unlocked) return children
+  if (profileUnlocked) return children
 
   const overlay = (
     <div

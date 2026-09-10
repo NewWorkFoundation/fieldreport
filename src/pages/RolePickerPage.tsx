@@ -37,8 +37,8 @@ export function RolePickerPage() {
       <p className="mx-auto mt-3 max-w-md text-center text-[15px] leading-relaxed text-muted">Choose up to three. Put your first choice at the top and we’ll compare the market for each one.</p>
       <section className="mt-8 rounded-xl bg-surface p-4 sm:p-5" aria-label="Rank target roles">
         {loading ? <p className="py-6 text-center text-sm text-muted">Loading Field Report roles…</p> : null}
-        {error ? <p className="py-6 text-center text-sm text-negative">We couldn’t load the role catalog. Try again.</p> : null}
-        {!loading && !error ? <RoleRanker occupations={occupations} selected={selected} onChange={setSelected} autoFocus /> : null}
+        {!loading && error && !occupations.length ? <p className="py-6 text-center text-sm text-negative">We couldn’t load the role catalog. Try again.</p> : null}
+        {!loading && occupations.length ? <RoleRanker occupations={occupations} selected={selected} onChange={setSelected} autoFocus /> : null}
       </section>
       <button type="button" onClick={continueToReport} disabled={!selected.length} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-black px-5 text-sm font-bold text-white hover:bg-coral hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-35">Compare {selected.length || ''} {selected.length === 1 ? 'role' : 'roles'} <span aria-hidden>→</span></button>
       <p className="mt-3 text-center text-xs text-muted">Your ranking is saved to your dearCC profile.</p>

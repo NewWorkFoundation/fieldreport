@@ -48,11 +48,22 @@ interface DataContextValue {
 const DataContext = createContext<DataContextValue | null>(null)
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    cache: import.meta.env.DEV ? 'no-cache' : 'force-cache',
-  })
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`)
-  return res.json() as Promise<T>
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        cache: attempt > 0 ? 'reload' : import.meta.env.DEV ? 'no-cache' : 'force-cache',
+      })
+      if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`)
+      return await res.json() as T
+    } catch (error) {
+      lastError = error
+      if (attempt < 2) {
+        await new Promise((resolve) => window.setTimeout(resolve, 150 * (attempt + 1)))
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`Failed to fetch ${url}`)
 }
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -74,35 +85,54 @@ export function DataProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     ;(async () => {
       try {
-        const [m, o, c, e, a, w, u] = await Promise.all([
-          fetchJson<Major[]>(assetUrl('data/majors.json')),
-          fetchJson<Occupation[]>(assetUrl('data/occupations.json')),
-          fetchJson<Crosswalk>(assetUrl('data/crosswalk.json')),
-          fetchJson<EloundouFile>(assetUrl('data/eloundou.json')),
-          fetchJson<AiImpactFile>(assetUrl('data/ai-impact.json')),
-          fetchJson<EntryWageTrendFile>(assetUrl('data/entry-wage-trend.json')),
-          fetchJson<UnobviousPathsFile>(assetUrl('data/unobvious-paths.json')),
-        ])
+        const [mResult, oResult, cResult, eResult, aResult, wResult, uResult] =
+          await Promise.allSettled([
+            fetchJson<Major[]>(assetUrl('data/majors.json')),
+            fetchJson<Occupation[]>(assetUrl('data/occupations.json')),
+            fetchJson<Crosswalk>(assetUrl('data/crosswalk.json')),
+            fetchJson<EloundouFile>(assetUrl('data/eloundou.json')),
+            fetchJson<AiImpactFile>(assetUrl('data/ai-impact.json')),
+            fetchJson<EntryWageTrendFile>(assetUrl('data/entry-wage-trend.json')),
+            fetchJson<UnobviousPathsFile>(assetUrl('data/unobvious-paths.json')),
+          ])
         if (cancelled) return
-        setMajors(
-          m
-            .filter((major) => isRealMajor(major.cip))
-            .map((major) => ({
-              ...major,
-              name: majorDisplayName(major.name),
+
+        if (mResult.status === 'fulfilled') {
+          setMajors(
+            mResult.value
+              .filter((major) => isRealMajor(major.cip))
+              .map((major) => ({
+                ...major,
+                name: majorDisplayName(major.name),
+              })),
+          )
+        }
+        if (oResult.status === 'fulfilled') {
+          setOccupations(
+            oResult.value.map((occ) => ({
+              ...occ,
+              competitionLevel: competitionLevelFromRatio(occ.graduatesPerOpening),
             })),
+          )
+        }
+        if (cResult.status === 'fulfilled') setCrosswalk(cResult.value)
+        if (eResult.status === 'fulfilled') setEloundouFile(eResult.value)
+        if (aResult.status === 'fulfilled') setAiImpactFile(aResult.value)
+        if (wResult.status === 'fulfilled') setWageTrendFile(wResult.value)
+        if (uResult.status === 'fulfilled') setUnobviousFile(uResult.value)
+
+        const failed = [mResult, oResult, cResult, eResult, aResult, wResult, uResult].filter(
+          (result): result is PromiseRejectedResult => result.status === 'rejected',
         )
-        setOccupations(
-          o.map((occ) => ({
-            ...occ,
-            competitionLevel: competitionLevelFromRatio(occ.graduatesPerOpening),
-          })),
-        )
-        setCrosswalk(c)
-        setEloundouFile(e)
-        setAiImpactFile(a)
-        setWageTrendFile(w)
-        setUnobviousFile(u)
+        if (failed.length) {
+          setError(
+            failed
+              .map((result) =>
+                result.reason instanceof Error ? result.reason.message : 'Failed to load data',
+              )
+              .join('; '),
+          )
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load data')
       } finally {
