@@ -6,7 +6,9 @@ import { formatNumber, formatSalary, sentenceCase } from '../lib/format'
 import { useAppPaths } from '../lib/useAppPaths'
 import type { Occupation } from '../types'
 
-const GAMEPLAN_URL = 'https://gameplan.dearcc.org/'
+const GAMEPLAN_URL = (
+  (import.meta.env.VITE_GAMEPLAN_URL as string | undefined) ?? 'https://gameplan.dearcc.org'
+).replace(/\/+$/, '')
 
 function exposureLabel(value: number | null) {
   if (value == null) return 'Not available'
@@ -20,13 +22,14 @@ export function RoleReportPage() {
   const { occupations, aiImpactBySoc, loading } = useData()
   const { mapBase } = useAppPaths()
   const [params] = useSearchParams()
+  const fromChecklist = params.get('checklist') === '1'
   const selected = useMemo(() => params.getAll('roleSoc').map((soc) => occupations.find((role) => role.soc === soc)).filter((role): role is Occupation => Boolean(role)).slice(0, 3), [occupations, params])
   const gameplanHref = useMemo(() => {
     const next = new URLSearchParams(params)
     next.delete('roleSoc')
     next.delete('role')
     next.set('roles', selected.map((role) => sentenceCase(role.title)).join(','))
-    return `${GAMEPLAN_URL}?${next.toString()}`
+    return `${GAMEPLAN_URL}/?${next.toString()}`
   }, [params, selected])
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-muted">Loading your report…</div>
@@ -56,7 +59,12 @@ export function RoleReportPage() {
             </div>
           </div></li>
         })}</ol>
-        <section className="mt-8 border-t border-border pt-8"><h2 className="text-2xl font-bold text-ink">Turn the comparison into a plan</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">Game Plan will start with these ranked roles, so you can focus your positioning and next actions.</p><a href={gameplanHref} className="mt-5 inline-flex min-h-12 items-center justify-center rounded-lg bg-black px-6 text-sm font-bold text-white no-underline hover:bg-coral hover:text-black">Build your game plan →</a></section>
+        <section className="mt-8 border-t border-border pt-8">
+          {fromChecklist ? <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-coral">Next checklist step</p> : null}
+          <h2 className="mt-2 text-2xl font-bold text-ink">{fromChecklist ? 'Build your game plan' : 'Turn the comparison into a plan'}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">Game Plan will start with these ranked roles, so you can focus your positioning and next actions.</p>
+          <a href={gameplanHref} className="mt-5 inline-flex min-h-12 items-center justify-center rounded-lg bg-black px-6 text-sm font-bold text-white no-underline hover:bg-coral hover:text-black">Build your game plan →</a>
+        </section>
       </main>
     </div>
   )

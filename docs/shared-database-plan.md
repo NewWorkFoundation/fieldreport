@@ -12,6 +12,10 @@ Gameplan will use the same production Postgres/Neon host as dear-cc, while
 continuing to own separate Gameplan tables. This does not merge user accounts
 or authentication across products.
 
+Crew and mentor matching remain one flow inside Gameplan. After the matching
+questionnaire is submitted, Gameplan reports the `crew_match` milestone to the
+canonical dear-cc profile.
+
 ## What remains before cutover
 
 1. No `DATABASE_URL` is needed in Field Report.
@@ -32,3 +36,10 @@ that the `leadId` belongs to the same profile.
 
 Field Report must keep using the relay rather than exposing a database URL or
 database credentials to the Vite client.
+
+## Complete local flow
+
+Run `npm run dev:local` from the sibling `dear-cc` repository. Its local
+harness starts Field Report on port 5173, points the Gameplan handoff to port
+5174, and points the completion relay at dear-cc on port 3002. See
+`dear-cc/docs/local-profile-flow.md` for the click-through.
