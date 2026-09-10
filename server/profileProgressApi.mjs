@@ -27,6 +27,7 @@ export async function handleProfileProgress(req, res) {
     process.env.DEARCC_PROFILE_URL || (isLocal ? 'http://localhost:3000' : 'https://dearcc.org')
   ).replace(/\/$/, '')
   const secret = process.env.PROFILE_SYNC_SECRET || (isLocal ? 'local-dearcc-profile-sync' : '')
+  const protectionBypassSecret = process.env.DEARCC_VERCEL_BYPASS_SECRET?.trim()
   if (!secret) {
     res.statusCode = 503
     res.end(JSON.stringify({ error: 'Profile sync is not configured' }))
@@ -55,6 +56,9 @@ export async function handleProfileProgress(req, res) {
       headers: {
         Authorization: `Bearer ${secret}`,
         'Content-Type': 'application/json',
+        ...(protectionBypassSecret
+          ? { 'x-vercel-protection-bypass': protectionBypassSecret }
+          : {}),
       },
       body: JSON.stringify({ leadId, ...(email ? { email } : {}), step: 'field_report', targetRoles }),
     })
