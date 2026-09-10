@@ -23,7 +23,7 @@ The Results email CTA and signup forms POST to `/api/subscribe` on this app (Res
 
 ## Deploy
 
-- **Vercel** — import [skyspeak/fieldreport](https://github.com/skyspeak/fieldreport); set `RESEND_API_KEY`.
+- **Vercel** — import [NewWorkFoundation/fieldreport](https://github.com/NewWorkFoundation/fieldreport); set `RESEND_API_KEY`, `DEARCC_PROFILE_URL`, `PROFILE_SYNC_SECRET`, `BASE_URL`, and `VITE_GAMEPLAN_URL`. Do not set `DATABASE_URL`; Field Report writes profile progress through dearCC's server-only relay.
 - **GitHub Pages** — Actions build with `GITHUB_PAGES=true` (base `/fieldreport/`).
 
 ## Stack

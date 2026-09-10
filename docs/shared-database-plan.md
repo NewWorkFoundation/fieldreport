@@ -8,9 +8,9 @@ its completion state by calling dear-cc's authenticated
 `/api/profile/progress` endpoint. dear-cc stores that state in its canonical
 `leads` profile record.
 
-Gameplan will use the same production Postgres/Neon host as dear-cc, while
-continuing to own separate Gameplan tables. This does not merge user accounts
-or authentication across products.
+dear-cc and Gameplan will use the existing Gameplan Neon database as their
+shared production host, while continuing to own separate tables. This does not
+merge user accounts or authentication across products.
 
 Crew and mentor matching remain one flow inside Gameplan. After the matching
 questionnaire is submitted, Gameplan reports the `crew_match` milestone to the
@@ -22,7 +22,8 @@ canonical dear-cc profile.
 2. In each deployed environment, set `DEARCC_PROFILE_URL` to the matching
    dear-cc deployment and set the same `PROFILE_SYNC_SECRET` there and in
    dear-cc. Keep the secret out of Git.
-3. After dear-cc and Gameplan share their production database, test a complete
+3. After dear-cc has migrated its schema and data into the Gameplan Neon
+   database, test a complete
    Field Report flow and confirm the profile-progress request succeeds.
 4. Verify the selected target roles and `field_report_completed_at` are saved
    on the matching dear-cc `leads` record.
