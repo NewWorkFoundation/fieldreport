@@ -1,7 +1,7 @@
 import { MajorSearch } from '../components/MajorSearch'
 import { DocumentMeta } from '../components/DocumentMeta'
 import { Mascot } from '../components/Mascot'
-import { TypistSankey } from '../components/TypistSankey'
+import { FieldReportEntryGraphic } from '../components/FieldReportEntryGraphic'
 import { useAppPaths } from '../lib/useAppPaths'
 import { useTheme } from '../lib/theme'
 import { useData } from '../data/DataContext'
@@ -13,14 +13,14 @@ export function HomePage() {
 
   return (
     <div className="flex flex-col items-center justify-start pt-16 sm:pt-24 pb-20 px-4">
-      <DocumentMeta />
+      <DocumentMeta description="BLS salary data, projected annual openings, and AI-exposure scores for every U.S. degree." />
       <div className="text-center max-w-2xl mx-auto w-full">
         <Mascot className="mx-auto mb-6 h-12 w-12 sm:h-14 sm:w-14" />
         <h1 className="font-sans text-4xl sm:text-5xl lg:text-[3.25rem] font-bold tracking-tight text-ink text-balance leading-[1.1]">
           What&apos;s your degree worth?
         </h1>
         <p className="mt-4 text-base sm:text-lg text-muted leading-relaxed text-pretty max-w-xl mx-auto">
-          Explore both traditional and adjacent jobs for your major. Compare salary data, hiring
+          Explore both traditional and adjacent jobs for your degree. Compare salary data, hiring
           volume, and which paths are growing.
         </p>
 
@@ -34,7 +34,8 @@ export function HomePage() {
               majors={majors}
               size="lg"
               resultsBase={resultsBase}
-              placeholder="Search your major"
+              placeholder="Search your degree"
+              noMatchNoun="degrees"
               tone={isDark ? 'dark' : 'light'}
             />
           )}
@@ -52,7 +53,7 @@ export function HomePage() {
             <div className="text-2xl sm:text-3xl font-bold text-ink font-mono tabular-nums">
               1,920
             </div>
-            <div className="text-xs text-muted mt-1">Majors</div>
+            <div className="text-xs text-muted mt-1">Degrees</div>
           </div>
           <div className="h-8 w-px bg-border" />
           <div>
@@ -78,10 +79,8 @@ export function HomePage() {
         </blockquote>
       </div>
 
-      <div className="mt-14 w-full max-w-6xl overflow-x-auto rounded-xl">
-        <div className="min-w-[820px]">
-          <TypistSankey className="w-full h-auto block" />
-        </div>
+      <div className="mt-14 w-full max-w-4xl">
+        <FieldReportEntryGraphic />
       </div>
     </div>
   )

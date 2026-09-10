@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { LETTER_URL } from '../lib/letterUrl'
+import { SUBSCRIBE_URL } from '../lib/subscribe'
 
 export const V2_SIGNUP_KEY = 'fr-v2-signup'
 export const V3_SIGNUP_KEY = 'fr-v3-signup'
@@ -81,9 +81,8 @@ export function JoinSignupCard({
       return
     }
 
-    const endpoint = `${LETTER_URL}/api/subscribe`
     try {
-      const res = await fetch(endpoint, {
+      await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,24 +91,13 @@ export function JoinSignupCard({
           lastName: last,
           name: `${first} ${last}`,
           linkedin: normalizeLinkedIn(linkedin),
+          linkedinUrl: normalizeLinkedIn(linkedin),
           sourceRef,
           reportUrl: reportUrl(),
         }),
       })
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) {
-        throw new Error(data.error ?? `request failed (${res.status})`)
-      }
-    } catch (err) {
-      if (err instanceof TypeError) {
-        onComplete()
-        return
-      }
-      setStatus('error')
-      setErrorMsg(
-        err instanceof Error ? err.message : 'Something went wrong. Try again.',
-      )
-      return
+    } catch {
+      /* persist is best-effort; never block the gate on mail delivery */
     }
     onComplete()
   }

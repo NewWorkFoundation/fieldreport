@@ -1,5 +1,14 @@
 {
   "functions": {
+    "api/subscribe.js": {
+      "includeFiles": "server/**"
+    },
+    "api/email/preview.js": {
+      "includeFiles": "server/**"
+    },
+    "api/email/sent.js": {
+      "includeFiles": "server/**"
+    },
     "api/v3/report.js": {
       "includeFiles": "{server/**,public/data/majors.json,public/data/occupations.json,public/data/crosswalk.json,public/data/places.json,public/data/v3/**}",
       "maxDuration": 60

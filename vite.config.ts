@@ -8,6 +8,8 @@ import { v3ApiPlugin } from './server/v3Api.mjs'
 import { v4ApiPlugin } from './server/v4Api.mjs'
 // @ts-expect-error — no .d.ts for server/*.mjs under nodenext
 import { profileProgressApiPlugin } from './server/profileProgressApi.mjs'
+// @ts-expect-error — no .d.ts for server/*.mjs under nodenext
+import { subscribeApiPlugin } from './server/subscribeApi.mjs'
 
 export default defineConfig(({ mode }) => {
   // Expose AOI_* to the Vite Node process (API plugin), not to the browser.
@@ -18,12 +20,21 @@ export default defineConfig(({ mode }) => {
     'AOI_BASE_URL',
     'DEARCC_PROFILE_URL',
     'PROFILE_SYNC_SECRET',
+    'RESEND_API_KEY',
+    'RESEND_FROM_EMAIL',
   ]) {
     if (env[key] && !process.env[key]) process.env[key] = env[key]
   }
 
   return {
     base: process.env.GITHUB_PAGES === 'true' ? '/fieldreport/' : '/',
-    plugins: [react(), tailwindcss(), v3ApiPlugin(), v4ApiPlugin(), profileProgressApiPlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      v3ApiPlugin(),
+      v4ApiPlugin(),
+      profileProgressApiPlugin(),
+      subscribeApiPlugin(),
+    ],
   }
 })
