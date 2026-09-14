@@ -10,6 +10,11 @@ const GAMEPLAN_URL = (
   (import.meta.env.VITE_GAMEPLAN_URL as string | undefined) ?? 'https://gameplan.dearcc.org'
 ).replace(/\/+$/, '')
 
+const DEARCC_URL = (
+  (import.meta.env.VITE_DEARCC_URL as string | undefined) ??
+  (import.meta.env.DEV ? 'http://localhost:3002' : 'https://www.dearcc.org')
+).replace(/\/+$/, '')
+
 function exposureLabel(value: number | null) {
   if (value == null) return 'Not available'
   if (value < 3.5) return 'Low'
@@ -66,10 +71,15 @@ export function RoleReportPage() {
           </div></li>
         })}</ol>
         <section className="mt-8 border-t border-border pt-8">
-          {fromChecklist ? <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-coral">Next checklist step</p> : null}
-          <h2 className="mt-2 text-2xl font-bold text-ink">{fromChecklist ? 'Build your game plan' : 'Turn the comparison into a plan'}</h2>
+          {fromChecklist ? (
+            <a href={`${DEARCC_URL}/profile`} className="inline-flex min-h-12 items-center justify-center rounded-lg bg-black px-6 text-sm font-bold text-white no-underline hover:bg-coral hover:text-black">Back to checklist →</a>
+          ) : (
+            <>
+          <h2 className="mt-2 text-2xl font-bold text-ink">Turn the comparison into a plan</h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">Game Plan will start with these ranked roles, so you can focus your positioning and next actions.</p>
           <a href={gameplanHref} className="mt-5 inline-flex min-h-12 items-center justify-center rounded-lg bg-black px-6 text-sm font-bold text-white no-underline hover:bg-coral hover:text-black">Build your game plan →</a>
+            </>
+          )}
         </section>
       </main>
     </div>
