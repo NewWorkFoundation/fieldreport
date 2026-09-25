@@ -1,11 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
+import { identifyMember } from '../lib/analytics'
 import { getDearccProfile } from '../lib/dearccProfile'
 
 export function DearccProfileHandoff() {
   const location = useLocation()
   const [params, setParams] = useSearchParams()
   const checkedProfile = useRef(false)
+  const leadId = params.get('leadId')
+
+  // Hub handoff links carry `leadId` on any route, including the gated reports.
+  useEffect(() => {
+    identifyMember(leadId)
+  }, [leadId])
 
   useEffect(() => {
     if (!location.pathname.startsWith('/v3/roles') || checkedProfile.current) return
@@ -15,6 +22,7 @@ export function DearccProfileHandoff() {
     void getDearccProfile()
       .then((profile) => {
         if (cancelled || !profile) return
+        identifyMember(profile.leadId)
         const next = new URLSearchParams(params)
         // A bookmarked handoff can point at a different database or an old
         // profile. The active dearCC cookie is authoritative when available.

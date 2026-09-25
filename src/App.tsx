@@ -1,5 +1,7 @@
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { DataProvider } from './data/DataContext'
+import { trackPageview } from './lib/analytics'
 import { Layout } from './components/Layout'
 import { V2SignupGate } from './components/V2SignupGate'
 import { V3SignupGate } from './components/V3SignupGate'
@@ -36,10 +38,19 @@ function V4AtlasRedirect() {
   return <Navigate to={`/v4/map/${cipCode}`} replace />
 }
 
+function RoutePageviews() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    trackPageview()
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <DataProvider>
       <BrowserRouter basename={basename}>
+        <RoutePageviews />
         <DearccProfileHandoff />
         <ThemeProvider>
           <Layout>
