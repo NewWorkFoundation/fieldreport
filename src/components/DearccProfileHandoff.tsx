@@ -8,14 +8,25 @@ export function DearccProfileHandoff() {
   const [params, setParams] = useSearchParams()
   const checkedProfile = useRef(false)
   const leadId = params.get('leadId')
+  const onRoleEntry = location.pathname.startsWith('/v3/roles')
 
-  // Hub handoff links carry `leadId` on any route, including the gated reports.
+  // Hub handoff links carry `leadId` on any route, but a forwarded link carries
+  // someone else's. Only the dearCC session proves who is browsing.
   useEffect(() => {
-    identifyMember(leadId)
-  }, [leadId])
+    if (!leadId || onRoleEntry) return
+    let cancelled = false
+    void getDearccProfile()
+      .then((profile) => {
+        if (!cancelled && profile) identifyMember(profile.leadId)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [leadId, onRoleEntry])
 
   useEffect(() => {
-    if (!location.pathname.startsWith('/v3/roles') || checkedProfile.current) return
+    if (!onRoleEntry || checkedProfile.current) return
     checkedProfile.current = true
 
     let cancelled = false
