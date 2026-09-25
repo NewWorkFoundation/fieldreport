@@ -19,6 +19,7 @@ const URL_PROPERTIES = [
   '$referrer',
   '$initial_referrer',
   '$session_entry_url',
+  '$session_entry_referrer',
 ] as const
 
 // Stored first-touch URLs stay in the cookie, so mask these before they persist.
