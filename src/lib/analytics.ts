@@ -81,6 +81,9 @@ export function initAnalytics() {
     person_profiles: 'identified_only',
     persistence: 'localStorage+cookie',
     cross_subdomain_cookie: true,
+    // Otherwise this site's localStorage beats the shared cookie, and an identity change
+    // on another dearcc.org site (sign-in, logout) never reaches it.
+    cookieWinsOnConflict: true,
     mask_personal_data_properties: true,
     custom_personal_data_properties: HANDOFF_QUERY_PARAMS,
     before_send: cleanPosthogUrls,
