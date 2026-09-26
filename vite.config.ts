@@ -28,6 +28,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.GITHUB_PAGES === 'true' ? '/fieldreport/' : '/',
+    define: {
+      // Lets analytics tag preview builds apart from production.
+      'import.meta.env.VITE_VERCEL_ENV': JSON.stringify(process.env.VERCEL_ENV || ''),
+    },
     plugins: [
       react(),
       tailwindcss(),
