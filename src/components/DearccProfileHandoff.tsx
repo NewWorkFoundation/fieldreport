@@ -1,20 +1,39 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
+import { identifyMember } from '../lib/analytics'
 import { getDearccProfile } from '../lib/dearccProfile'
 
 export function DearccProfileHandoff() {
   const location = useLocation()
   const [params, setParams] = useSearchParams()
   const checkedProfile = useRef(false)
+  const leadId = params.get('leadId')
+  const onRoleEntry = location.pathname.startsWith('/v3/roles')
+
+  // Hub handoff links carry `leadId` on any route, but a forwarded link carries
+  // someone else's. Only the dearCC session proves who is browsing.
+  useEffect(() => {
+    if (!leadId || onRoleEntry) return
+    let cancelled = false
+    void getDearccProfile()
+      .then((profile) => {
+        if (!cancelled && profile) identifyMember(profile.leadId)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [leadId, onRoleEntry])
 
   useEffect(() => {
-    if (!location.pathname.startsWith('/v3/roles') || checkedProfile.current) return
+    if (!onRoleEntry || checkedProfile.current) return
     checkedProfile.current = true
 
     let cancelled = false
     void getDearccProfile()
       .then((profile) => {
         if (cancelled || !profile) return
+        identifyMember(profile.leadId)
         const next = new URLSearchParams(params)
         // A bookmarked handoff can point at a different database or an old
         // profile. The active dearCC cookie is authoritative when available.
