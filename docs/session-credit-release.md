@@ -19,7 +19,9 @@ credited account. The old secret-authenticated progress endpoint rejects
 
 Field Report ignores and removes identity parameters from old links, does not
 use them to unlock or prefill signup, and removes the anonymous progress relay.
-It sends one request per mounted unlocked report. The browser event identifies
+It skips the credit request for already-recorded members and sends at most one
+request per newly unlocked mounted report. The server also deduplicates concurrent
+unlocks, and only a new credit emits the browser event. The browser event identifies
 the account returned by the server. Existing local signup access still opens the
 report; without a signed-in hub session, it receives no member credit.
 Selected roles and the checklist return route remain available.

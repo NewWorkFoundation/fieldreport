@@ -8,7 +8,7 @@ test('forwarded report uses Alice session, strips Bob identity and records once'
   await page.route('**/api/profile/handoff', route => route.fulfill({ json: { authenticated: true, profile: { leadId: alice, email: 'alice@example.test', targetRoles: [] } } }))
   await page.route('**/api/profile/field-report-unlocked', async route => {
     credits.push(route.request().postDataJSON())
-    await route.fulfill({ json: { success: true, leadId: alice } })
+    await route.fulfill({ json: { success: true, leadId: alice, recorded: true } })
   })
   await page.goto(link)
   await expect.poll(() => credits.length).toBe(1)
@@ -38,4 +38,15 @@ test('old local signup access cannot credit a forwarded identity', async ({ page
   await expect(page.getByRole('heading', {name:'How your target roles compare'})).toBeVisible()
   await expect.poll(() => credits.length).toBe(1)
   expect(JSON.stringify(credits)).not.toContain(bob)
+})
+
+test('a member with an existing unlock does not send another credit on page load', async ({ page }) => {
+  let credits = 0
+  await page.route('**/api/profile/handoff', route => route.fulfill({json:{authenticated:true,profile:{leadId:alice,fieldReportCompleted:true,targetRoles:[]}}}))
+  await page.route('**/api/profile/field-report-unlocked', route => { credits++; return route.fulfill({json:{}}) })
+  await page.goto(link)
+  await expect(page.getByRole('heading', {name:'How your target roles compare'})).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', {name:'How your target roles compare'})).toBeVisible()
+  expect(credits).toBe(0)
 })

@@ -7,7 +7,7 @@ test('unlock sends credentials and roles, identifies only the server-confirmed v
   const events = [], calls = []
   await recordFieldReportUnlock('https://dearcc.org', [{ soc: '15-1252', title: 'Developer' }], async (url, init) => {
     calls.push({url, init})
-    return Response.json({ success: true, leadId: 'alice' })
+    return Response.json({ success: true, leadId: 'alice', recorded: true })
   }, id => events.push(id))
   assert.equal(calls.length, 1)
   assert.equal(calls[0].url, 'https://dearcc.org/api/profile/field-report-unlocked')
@@ -28,4 +28,10 @@ test('old link identity is removed while role selection survives', () => {
   for (const key of IDENTITY_PARAMS) assert.equal(clean.has(key), false)
   assert.equal(clean.get('roleSoc'), '15-1252')
   assert.equal(clean.get('checklist'), '1')
+})
+
+test('a previously recorded unlock does not emit another event', async () => {
+  let events = 0
+  await recordFieldReportUnlock('', [], async () => Response.json({leadId:'alice',recorded:false}), () => events++)
+  assert.equal(events, 0)
 })

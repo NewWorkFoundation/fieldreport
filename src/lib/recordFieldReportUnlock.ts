@@ -13,6 +13,6 @@ export async function recordFieldReportUnlock(
   // Anonymous signup can still expose the report, but cannot credit any member.
   if (response.status === 401) return
   if (!response.ok) throw new Error('Could not record Field Report unlock')
-  const result = await response.json() as { leadId: string }
-  onRecorded(result.leadId)
+  const result = await response.json() as { leadId: string; recorded: boolean }
+  if (result.recorded) onRecorded(result.leadId)
 }

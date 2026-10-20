@@ -14,16 +14,20 @@ import { useFieldReportProfileProgress } from '../lib/profileProgress'
 export function V3SignupGate({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState(() => hasSignup(V3_SIGNUP_KEY))
   const [signedIn, setSignedIn] = useState(false)
+  const [alreadyRecorded, setAlreadyRecorded] = useState(false)
   const [checking, setChecking] = useState(true)
   useEffect(() => {
     let cancelled = false
     void getDearccProfile().then(profile => {
-      if (!cancelled) setSignedIn(Boolean(profile))
+      if (!cancelled) {
+        setSignedIn(Boolean(profile))
+        setAlreadyRecorded(profile?.fieldReportCompleted === true)
+      }
     }).catch(() => undefined).finally(() => { if (!cancelled) setChecking(false) })
     return () => { cancelled = true }
   }, [])
   const profileUnlocked = unlocked || signedIn
-  useFieldReportProfileProgress(profileUnlocked && !checking)
+  useFieldReportProfileProgress(profileUnlocked && !checking && !alreadyRecorded)
 
   useEffect(() => {
     if (profileUnlocked) return

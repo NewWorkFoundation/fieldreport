@@ -5,8 +5,7 @@ export const DEARCC_URL = (
 
 export type DearccProfile = {
   leadId: string
-  firstName: string
-  lastName: string
+  fieldReportCompleted: boolean
   email: string
   linkedin: string
   targetRoles: Array<{ soc?: string; title: string }>
@@ -28,8 +27,7 @@ export async function getDearccProfile(): Promise<DearccProfile | null> {
 
   return {
     leadId: body.profile.leadId,
-    firstName: body.profile.firstName ?? "",
-    lastName: body.profile.lastName ?? "",
+    fieldReportCompleted: body.profile.fieldReportCompleted === true,
     email: typeof body.profile.email === 'string' ? body.profile.email : '',
     linkedin: typeof body.profile.linkedin === 'string' ? body.profile.linkedin : '',
     targetRoles: Array.isArray(body.profile.targetRoles)
