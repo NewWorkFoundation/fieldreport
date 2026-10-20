@@ -66,11 +66,14 @@ export function JoinSignupCard({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    trackFieldReport('field_report_gate_submitted', { version })
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim()
-    if (!first || !last || !mail) return
+    if (!first || !last || !mail) {
+      trackFieldReport('field_report_gate_failed', { version, reason: 'validation' })
+      return
+    }
+    trackFieldReport('field_report_gate_submitted', { version })
 
     setStatus('sending')
     setErrorMsg(null)
