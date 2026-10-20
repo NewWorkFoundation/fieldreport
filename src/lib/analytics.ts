@@ -105,3 +105,10 @@ export function identifyMember(leadId: string | null | undefined) {
   if (!posthogInitialized || !leadId || !UUID.test(leadId)) return
   posthog.identify(leadId.toLowerCase())
 }
+
+/** Identify only the account confirmed by the unlock endpoint. */
+export function trackFieldReportUnlocked(leadId: string) {
+  if (!posthogInitialized || !UUID.test(leadId)) return
+  identifyMember(leadId)
+  posthog.capture('field_report_unlocked')
+}

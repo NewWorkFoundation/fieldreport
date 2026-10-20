@@ -10,7 +10,9 @@
     "build:ai-impact": "node scripts/build-ai-impact.mjs",
     "build:v3": "node scripts/build-v3-aoi.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "d3-geo": "^3.1.1",
@@ -23,6 +25,7 @@
     "topojson-client": "^3.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/d3-geo": "^3.1.0",
     "@types/d3-scale": "^4.0.9",

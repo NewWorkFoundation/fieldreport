@@ -1,3 +1,4 @@
+import { withoutIdentity } from '../lib/identityParams'
 import { useId, useState, type FormEvent } from 'react'
 import { SUBSCRIBE_URL } from '../lib/subscribe'
 
@@ -22,7 +23,8 @@ export function markSignup(key: string) {
 
 function reportUrl(): string {
   if (typeof window === 'undefined') return ''
-  const path = `${window.location.pathname}${window.location.search}`
+  const query = withoutIdentity(new URLSearchParams(window.location.search)).toString()
+  const path = `${window.location.pathname}${query ? `?${query}` : ''}`
   const configured = (
     import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined
   )?.replace(/\/$/, '')
@@ -31,7 +33,7 @@ function reportUrl(): string {
   if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
     return `https://fieldreport.dearcc.org${path}`
   }
-  return window.location.href.split('#')[0] ?? window.location.href
+  return `${origin}${path}`
 }
 
 function linkedinSlug(raw: string): string {
@@ -52,14 +54,10 @@ export function JoinSignupCard({
   onComplete: () => void
 }) {
   const id = useId()
-  const handoff = new URLSearchParams(
-    typeof window === 'undefined' ? '' : window.location.search,
-  )
-  const existingProfile = Boolean(handoff.get('leadId'))
-  const [firstName, setFirstName] = useState(() => handoff.get('first') ?? '')
-  const [lastName, setLastName] = useState(() => handoff.get('last') ?? '')
-  const [email, setEmail] = useState(() => handoff.get('email') ?? '')
-  const [linkedin, setLinkedin] = useState(() => linkedinSlug(handoff.get('linkedin') ?? ''))
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [linkedin, setLinkedin] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -72,14 +70,6 @@ export function JoinSignupCard({
 
     setStatus('sending')
     setErrorMsg(null)
-
-    // The umbrella signup already created the account and weekly subscription.
-    // This confirmation only unlocks the generated Field Report; the gate then
-    // records completion back on that canonical profile.
-    if (existingProfile) {
-      onComplete()
-      return
-    }
 
     try {
       await fetch(SUBSCRIBE_URL, {
@@ -164,8 +154,8 @@ export function JoinSignupCard({
           className="flex w-full items-center justify-center rounded-lg bg-black px-4 py-3.5 text-base font-bold text-white transition-colors hover:bg-[#ff5a3d] hover:text-black disabled:opacity-60"
         >
           {sending
-            ? existingProfile ? 'Opening report…' : 'Creating account…'
-            : existingProfile ? 'View my report →' : 'Create my account →'}
+            ? 'Creating account…'
+            : 'Create my account →'}
         </button>
       </form>
 

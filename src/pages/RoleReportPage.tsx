@@ -1,3 +1,4 @@
+import { withoutIdentity } from '../lib/identityParams'
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { DocumentMeta } from '../components/DocumentMeta'
@@ -30,7 +31,7 @@ export function RoleReportPage() {
   const fromChecklist = params.get('checklist') === '1'
   const selected = useMemo(() => params.getAll('roleSoc').map((soc) => occupations.find((role) => role.soc === soc)).filter((role): role is Occupation => Boolean(role)).slice(0, 3), [occupations, params])
   const gameplanHref = useMemo(() => {
-    const next = new URLSearchParams(params)
+    const next = withoutIdentity(params)
     next.delete('roleSoc')
     next.delete('role')
     const profileRoles = (next.get('profileRoles') ?? '').split(';').map((role) => role.trim()).filter(Boolean)
