@@ -1,6 +1,6 @@
+import { stripUrlDetails as cleanUrlProperties } from './url-redaction'
 import posthog, {
   type CaptureResult,
-  type Properties,
 } from 'posthog-js/dist/module.slim.no-external'
 
 const env = import.meta.env
@@ -12,40 +12,14 @@ const POSTHOG_ENABLED = ENABLED_FLAG ? ENABLED_FLAG === 'true' || ENABLED_FLAG =
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Hub handoff URLs carry email and LinkedIn in the query string.
-const URL_PROPERTIES = [
-  '$current_url',
-  '$initial_current_url',
-  '$referrer',
-  '$initial_referrer',
-  '$session_entry_url',
-  '$session_entry_referrer',
-] as const
+// Legacy links may contain identity fields; never record them.
+
 
 // Stored first-touch URLs stay in the cookie, so mask these before they persist.
-const HANDOFF_QUERY_PARAMS = ['leadId', 'email', 'first', 'last', 'linkedin']
+const HANDOFF_QUERY_PARAMS = ['leadId', 'email', 'first', 'last', 'graduationYear', 'linkedin']
 
 let posthogInitialized = false
 let lastPageviewPath = ''
-
-function cleanUrl(raw: string) {
-  // Leave non-URL markers such as `$direct` alone.
-  if (!/^[a-z][a-z\d+.-]*:/i.test(raw)) return raw.split(/[?#]/, 1)[0]
-  try {
-    const url = new URL(raw, window.location.origin)
-    return `${url.origin}${url.pathname}`
-  } catch {
-    return raw.split(/[?#]/, 1)[0]
-  }
-}
-
-function cleanUrlProperties(properties?: Properties) {
-  if (!properties) return
-  for (const key of URL_PROPERTIES) {
-    const value = properties[key]
-    if (typeof value === 'string') properties[key] = cleanUrl(value)
-  }
-}
 
 function cleanPosthogUrls(result: CaptureResult | null) {
   if (!result) return null
