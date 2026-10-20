@@ -4,7 +4,11 @@ Production source confirmed on 2026-10-20 UTC: `fieldreport.dearcc.org` aliases
 Vercel project `agent_product` (`prj_ChLFx2a8PCMiSfqQFdQ6spNbzA1T`) in
 `new-work-foundation`. Deployment `dpl_8V4dVctcMsZQP42ap6yiQnS5HtrM` records
 CLI source, repository `NewWorkFoundation/fieldreport`, main commit
-`eea41f8a0714cc44d1a15d082211ad18e32af546`. The project has no Git link.
+`eea41f8a0714cc44d1a15d082211ad18e32af546`. At the initial inspection the project
+had no Git link. During this review, a Git connection was added externally:
+`NewWorkFoundation/fieldreport`, production branch `main`. The Git preview
+`dpl_Ds42iRPxrAgWNLbqhZNUNcaZwip3` successfully deployed this PR's commit
+`b358d3f49d312378e4b264cd4c2ceb59633a5e0b`. We did not change the connection.
 This identifies the checkout recorded at deployment; CLI metadata does not prove
 there were no uncommitted local changes. Current main also includes the later
 analytics identity changes, which must be included in release review.
@@ -51,8 +55,9 @@ removes its own fixtures and stops the servers. Never use production credentials
 ## Release (approval required)
 
 1. Review both PRs and deploy the hub endpoint/removal first.
-2. Immediately deploy the reviewed Field Report commit to `agent_product` via CLI.
-   A GitHub merge or GitHub Pages build does not update this Vercel production site.
+2. After the hub deployment is ready, merge Field Report and verify its automatic
+   Vercel production deployment. The project now deploys `main` from Git. The
+   separate GitHub Pages deployment is not the production Field Report domain.
 3. Verify allowed-origin preflight, signed-out rejection, and old relay rejection;
    confirm the reviewed deployment and domain aliases. Use an approved test
    account for any production unlock test.
