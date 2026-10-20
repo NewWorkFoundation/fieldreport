@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'react-router-dom'
+import { getDearccProfile } from '../lib/dearccProfile'
 import { DocumentMeta } from './DocumentMeta'
 import {
   JoinSignupCard,
@@ -12,13 +12,22 @@ import { useFieldReportProfileProgress } from '../lib/profileProgress'
 
 /** Renders `/v3` results underneath a signup modal so the report is visible but unreadable. */
 export function V3SignupGate({ children }: { children: ReactNode }) {
-  const [searchParams] = useSearchParams()
-  const [unlocked, setUnlocked] = useState(() => {
-    const handoff = new URLSearchParams(window.location.search)
-    return hasSignup(V3_SIGNUP_KEY) || Boolean(handoff.get('leadId'))
-  })
-  const profileUnlocked = unlocked || Boolean(searchParams.get('leadId'))
-  useFieldReportProfileProgress(profileUnlocked)
+  const [unlocked, setUnlocked] = useState(() => hasSignup(V3_SIGNUP_KEY))
+  const [signedIn, setSignedIn] = useState(false)
+  const [alreadyRecorded, setAlreadyRecorded] = useState(false)
+  const [checking, setChecking] = useState(true)
+  useEffect(() => {
+    let cancelled = false
+    void getDearccProfile().then(profile => {
+      if (!cancelled) {
+        setSignedIn(Boolean(profile))
+        setAlreadyRecorded(profile?.fieldReportCompleted === true)
+      }
+    }).catch(() => undefined).finally(() => { if (!cancelled) setChecking(false) })
+    return () => { cancelled = true }
+  }, [])
+  const profileUnlocked = unlocked || signedIn
+  useFieldReportProfileProgress(profileUnlocked && !checking && !alreadyRecorded)
 
   useEffect(() => {
     if (profileUnlocked) return
@@ -32,6 +41,7 @@ export function V3SignupGate({ children }: { children: ReactNode }) {
     }
   }, [profileUnlocked])
 
+  if (checking) return <p role="status">Checking your dearCC sign-in…</p>
   if (profileUnlocked) return children
 
   const overlay = (
