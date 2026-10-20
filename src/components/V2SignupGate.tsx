@@ -1,3 +1,4 @@
+import { useGateAnalytics } from '../lib/useGateAnalytics'
 import { useEffect, useState, type ReactNode } from 'react'
 import { DocumentMeta } from './DocumentMeta'
 import {
@@ -11,6 +12,7 @@ import { useFieldReportProfileProgress } from '../lib/profileProgress'
 /** Blocks `/v2` results until the visitor creates a free account. */
 export function V2SignupGate({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState(() => hasSignup(V2_SIGNUP_KEY))
+  useGateAnalytics(unlocked, 'v2')
   useFieldReportProfileProgress(unlocked)
 
   if (unlocked) return children

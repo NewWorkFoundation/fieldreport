@@ -1,3 +1,4 @@
+import { useGateAnalytics } from '../lib/useGateAnalytics'
 import { useEffect, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getDearccProfile } from '../lib/dearccProfile'
@@ -28,6 +29,7 @@ export function V3SignupGate({ children }: { children: ReactNode }) {
   }, [])
   const profileUnlocked = unlocked || signedIn
   useFieldReportProfileProgress(profileUnlocked && !checking && !alreadyRecorded)
+  useGateAnalytics(profileUnlocked, 'v3', !checking)
 
   useEffect(() => {
     if (profileUnlocked) return

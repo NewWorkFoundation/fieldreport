@@ -1,5 +1,6 @@
 import { withoutIdentity } from '../lib/identityParams'
-import { useId, useState, type FormEvent } from 'react'
+import { trackFieldReport } from '../lib/analytics'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { SUBSCRIBE_URL } from '../lib/subscribe'
 
 export const V2_SIGNUP_KEY = 'fr-v2-signup'
@@ -54,6 +55,8 @@ export function JoinSignupCard({
   onComplete: () => void
 }) {
   const id = useId()
+  const version = sourceRef === 'fieldreport-v2' ? 'v2' : 'v3'
+  const invalidAt = useRef(0)
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -63,6 +66,7 @@ export function JoinSignupCard({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    trackFieldReport('field_report_gate_submitted', { version })
     const first = firstName.trim()
     const last = lastName.trim()
     const mail = email.trim()
@@ -72,7 +76,7 @@ export function JoinSignupCard({
     setErrorMsg(null)
 
     try {
-      await fetch(SUBSCRIBE_URL, {
+      const response = await fetch(SUBSCRIBE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +90,9 @@ export function JoinSignupCard({
           reportUrl: reportUrl(),
         }),
       })
+      if (!response.ok) trackFieldReport('field_report_gate_failed', { version, reason: 'http', status: response.status })
     } catch {
+      trackFieldReport('field_report_gate_failed', { version, reason: 'network' })
       /* persist is best-effort; never block the gate on mail delivery */
     }
     onComplete()
@@ -109,7 +115,12 @@ export function JoinSignupCard({
         Create one free profile to save this report and continue to your game plan.
       </p>
 
-      <form onSubmit={onSubmit} className="mt-7 space-y-3">
+      <form onInvalid={() => {
+        if (Date.now() - invalidAt.current > 100) {
+          invalidAt.current = Date.now()
+          trackFieldReport('field_report_gate_failed', { version, reason: 'validation' })
+        }
+      }} onSubmit={onSubmit} className="mt-7 space-y-3">
         <div className="overflow-hidden rounded-xl bg-[#f1f1f1]">
         <div className="grid grid-cols-2 gap-3 border-b border-black/10 px-4 py-3.5">
           <Field
