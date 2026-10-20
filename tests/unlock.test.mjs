@@ -35,3 +35,10 @@ test('a previously recorded unlock does not emit another event', async () => {
   await recordFieldReportUnlock('', [], async () => Response.json({leadId:'alice',recorded:false}), () => events++)
   assert.equal(events, 0)
 })
+
+import { profileBaseUrl } from '../src/lib/profileBaseUrl.ts'
+test('production API requests use the canonical host without a preflight redirect', () => {
+  assert.equal(profileBaseUrl('https://dearcc.org/'), 'https://www.dearcc.org')
+  assert.equal(profileBaseUrl('https://www.dearcc.org'), 'https://www.dearcc.org')
+  assert.equal(profileBaseUrl('http://127.0.0.1:3100/'), 'http://127.0.0.1:3100')
+})

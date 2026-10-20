@@ -1,7 +1,8 @@
-export const DEARCC_URL = (
+import { profileBaseUrl } from './profileBaseUrl'
+export const DEARCC_URL = profileBaseUrl(
   (import.meta.env.VITE_DEARCC_URL as string | undefined) ??
   (import.meta.env.DEV ? 'http://localhost:3002' : 'https://dearcc.org')
-).replace(/\/+$/, '')
+)
 
 export type DearccProfile = {
   leadId: string
