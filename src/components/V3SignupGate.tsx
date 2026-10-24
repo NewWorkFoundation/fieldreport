@@ -43,7 +43,21 @@ export function V3SignupGate({ children }: { children: ReactNode }) {
     }
   }, [profileUnlocked])
 
-  if (checking) return <p role="status">Checking your dearCC sign-in…</p>
+  if (checking) return (
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-20" role="status" aria-busy="true">
+      <span className="sr-only">Loading your report…</span>
+      <div aria-hidden="true" className="motion-safe:animate-pulse">
+        <div className="h-4 w-24 rounded bg-ink/10" />
+        <div className="mt-8 h-9 w-3/4 max-w-md rounded bg-ink/10" />
+        <div className="mt-4 h-4 w-full max-w-lg rounded bg-ink/5" />
+        <div className="mt-10 grid gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map(card => (
+            <div key={card} className="h-40 rounded-xl border border-ink/10 bg-ink/5" />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
   if (profileUnlocked) return children
 
   const overlay = (
