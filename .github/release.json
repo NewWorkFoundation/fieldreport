@@ -1,0 +1,21 @@
+{
+  "workflows": [
+    "ci.yml",
+    "release-checks.yml"
+  ],
+  "projects": [
+    {
+      "name": "agent_product",
+      "id": "prj_ChLFx2a8PCMiSfqQFdQ6spNbzA1T",
+      "stagingId": "env_aaIYZxVvCshbsGDGOAFrHHcj0EBd",
+      "token": "VERCEL_TOKEN",
+      "stagingDomain": "fieldreport.staging.dearcc.org",
+      "productionDomain": "fieldreport.dearcc.org",
+      "healthPath": "/v3",
+      "healthText": "</html>"
+    }
+  ],
+  "repository": "NewWorkFoundation/fieldreport",
+  "teamId": "team_0y8fdnM5HnzF4CSYD9MjOjKH",
+  "teamSlug": "new-work-foundation"
+}
