@@ -21,3 +21,5 @@ skills-lock.json
 
 test-results/
 playwright-report/
+
+/release-artifacts/

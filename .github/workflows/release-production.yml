@@ -1,0 +1,42 @@
+name: Release production
+on:
+  workflow_dispatch:
+    inputs:
+      verify_only:
+        description: 'Check release readiness without building or changing production'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+# Serialize staging and releases. Never cancel an in-flight migration or release.
+concurrency:
+  group: deploy-${{ github.repository }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Release the verified staging commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          RELEASE_MODE: ${{ inputs.verify_only && 'verify' || 'production' }}
+        run: node scripts/release.mjs "$RELEASE_MODE"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-artifacts/
+          if-no-files-found: ignore
+          retention-days: 90

@@ -29,3 +29,7 @@ The Results email CTA and signup forms POST to `/api/subscribe` on this app (Res
 ## Stack
 
 Vite · React · TypeScript · Tailwind v4 · React Router · Framer Motion · d3-geo
+
+## Deployment workflow
+
+PRs get previews using staging services. Merge to `main` to deploy shared staging after CI passes. To release the verified commit, use **Actions → Release production → Run workflow**. No staging-branch merges are needed. See [the release runbook](docs/releases.md) for migrations, credentials, and rollback.
