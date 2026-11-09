@@ -19,13 +19,13 @@ test('forwarded report uses Alice session, strips Bob identity and records once'
   expect(outgoing).not.toMatch(/leadId=|email=|first=/)
   expect(credits).toHaveLength(1)
 })
-test('signed-out forwarded link stays gated and never credits Bob', async ({ page }) => {
+test('signed-out forwarded link remains readable and never credits Bob', async ({ page }) => {
   let credits = 0
   await page.route('**/api/profile/handoff', route => route.fulfill({ status: 401, json: { authenticated: false } }))
   await page.route('**/api/profile/field-report-unlocked', route => { credits++; return route.fulfill({status:401}) })
   await page.goto(link)
-  await expect(page.getByRole('dialog', {name:'Join dearCC'})).toBeVisible()
-  await expect(page.getByLabel('Email', {exact:true})).toHaveValue('')
+  await expect(page.getByRole('heading', {name:'How your target roles compare'})).toBeVisible()
+  await expect(page.getByRole('dialog')).not.toBeVisible()
   expect(credits).toBe(0)
   await expect(page).not.toHaveURL(/leadId=|email=|first=/)
 })

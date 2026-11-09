@@ -89,8 +89,9 @@ export function trackFieldReportUnlocked(leadId: string) {
 
 export type FieldReportEvent = 'field_report_gate_viewed' | 'field_report_gate_submitted'
   | 'field_report_gate_failed' | 'field_report_gate_unlocked' | 'field_report_viewed'
+  | 'field_report_signup_prompt_viewed' | 'field_report_signup_prompt_dismissed' | 'field_report_signup_prompt_clicked'
 export function trackFieldReport(event: FieldReportEvent, properties: {
-  version: 'v2' | 'v3'; reason?: 'validation' | 'network' | 'http'; status?: number
+  version: 'v2' | 'v3' | 'public'; dismissVia?: 'close' | 'continue' | 'escape' | 'backdrop'; reason?: 'validation' | 'network' | 'http'; status?: number
 }) {
   if (!posthogInitialized) return
   try { posthog.capture(event, properties) } catch { /* Never block the report. */ }

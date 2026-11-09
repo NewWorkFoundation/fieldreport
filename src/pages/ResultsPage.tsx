@@ -1,3 +1,4 @@
+import { FieldReportSignupPrompt } from '../components/FieldReportSignupPrompt'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../data/DataContext'
@@ -165,7 +166,7 @@ export function ResultsPage() {
     unobviousByCip2,
     loading,
   } = useData()
-  const { home, mapBase, resultsBase } = useAppPaths()
+  const { home, mapBase, resultsBase, isV2, isV3 } = useAppPaths()
 
   const [showAll, setShowAll] = useState(false)
   const [sortField, setSortField] = useState<TableSort>('openPositions')
@@ -359,6 +360,7 @@ export function ResultsPage() {
 
   return (
     <div className={selectedRoles.length > 0 ? 'pb-28' : ''}>
+      {!isV2 && relevant.length > 0 && <FieldReportSignupPrompt key={cipCode} context={{ version: isV3 ? 'v3' : 'public', cip: cipCode, major: displayName, roles: selectedRoles.map(title => ({ title })) }} />}
       <DocumentMeta
         title={displayName}
         description={`BLS salaries, openings, and AI exposure for careers linked to ${displayName}.`}

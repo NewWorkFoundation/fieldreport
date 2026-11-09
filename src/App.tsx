@@ -4,7 +4,6 @@ import { DataProvider } from './data/DataContext'
 import { trackPageview } from './lib/analytics'
 import { Layout } from './components/Layout'
 import { V2SignupGate } from './components/V2SignupGate'
-import { V3SignupGate } from './components/V3SignupGate'
 import { ThemeProvider } from './lib/theme'
 import { EmailLabPage } from './pages/EmailLabPage'
 import { HomePage } from './pages/HomePage'
@@ -125,34 +124,22 @@ export default function App() {
               />
               <Route path="/v2/map/:socCode" element={<MapPage />} />
 
-              {/* /v3 is the current product with a signup modal over blurred results */}
+              {/* /v3 is the current product with an optional signup prompt after reading results */}
               <Route path="/v3" element={<HomePage />} />
               <Route path="/v3/receipts" element={<V3ReceiptsPage />} />
               <Route path="/v3/roles" element={<RolePickerPage />} />
-              <Route path="/v3/roles/report" element={<V3SignupGate><RoleReportPage /></V3SignupGate>} />
+              <Route path="/v3/roles/report" element={<RoleReportPage />} />
               <Route
                 path="/v3/results/:cipCode"
-                element={
-                  <V3SignupGate>
-                    <ResultsPage />
-                  </V3SignupGate>
-                }
+                element={<ResultsPage />}
               />
               <Route
                 path="/v3/results/:cipCode/place"
-                element={
-                  <V3SignupGate>
-                    <V3ZipPromptPage />
-                  </V3SignupGate>
-                }
+                element={<V3ZipPromptPage />}
               />
               <Route
                 path="/v3/results/:cipCode/:zip"
-                element={
-                  <V3SignupGate>
-                    <V3ResultsPage />
-                  </V3SignupGate>
-                }
+                element={<V3ResultsPage />}
               />
               <Route path="/v3/map/:socCode" element={<MapPage />} />
             </Routes>
