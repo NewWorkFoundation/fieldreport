@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/build-search-pages.mjs",
     "build:eloundou": "node scripts/build-eloundou.mjs",
     "build:ai-impact": "node scripts/build-ai-impact.mjs",
     "build:v3": "node scripts/build-v3-aoi.mjs",

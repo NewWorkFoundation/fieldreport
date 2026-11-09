@@ -31,6 +31,15 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_VERCEL_ENV': JSON.stringify(process.env.VERCEL_ENV || ''),
     },
     plugins: [
+      {
+        name: 'exclude-nonproduction-from-search',
+        transformIndexHtml(html) {
+          const nonproduction = (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== 'production') || process.env.APP_ENV === 'staging'
+          return nonproduction
+            ? html.replace('<head>', '<head>\n    <meta name="robots" content="noindex, follow" />')
+            : html
+        },
+      },
       react(),
       tailwindcss(),
       v3ApiPlugin(),

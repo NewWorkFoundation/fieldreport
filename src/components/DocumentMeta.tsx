@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { assetUrl } from '../lib/assetUrl'
+import { useLocation } from 'react-router-dom'
 
 const DEFAULT_TITLE = 'Field Report'
 const DEFAULT_DESCRIPTION =
@@ -23,19 +23,29 @@ export function DocumentMeta({
   title?: string
   description?: string
 }) {
+  const { pathname } = useLocation()
   useEffect(() => {
     const fullTitle = title ? `${title} · ${DEFAULT_TITLE}` : DEFAULT_TITLE
     document.title = fullTitle
 
-    const url = window.location.href
-    const image = new URL(assetUrl('brand/og.png'), window.location.origin).href
+    const path = pathname.replace(/\/$/, '') || '/'
+    const canonicalPath = /^\/v[23]$/.test(path) ? '/' : path.replace(/^\/v[23]\/receipts$/, '/receipts')
+    const url = `https://fieldreport.dearcc.org${canonicalPath}`
+    const image = 'https://fieldreport.dearcc.org/brand/field-report-social.png'
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+    if (!canonical) {
+      canonical = document.createElement('link')
+      canonical.rel = 'canonical'
+      document.head.appendChild(canonical)
+    }
+    canonical.href = url
     upsertMeta('name', 'description', description)
     upsertMeta('property', 'og:title', fullTitle)
     upsertMeta('property', 'og:description', description)
     upsertMeta('property', 'og:type', 'website')
     upsertMeta('property', 'og:url', url)
     upsertMeta('property', 'og:image', image)
-    upsertMeta('name', 'twitter:card', 'summary')
+    upsertMeta('name', 'twitter:card', 'summary_large_image')
     upsertMeta('name', 'twitter:title', fullTitle)
     upsertMeta('name', 'twitter:description', description)
     upsertMeta('name', 'twitter:image', image)
@@ -44,7 +54,7 @@ export function DocumentMeta({
       document.title = DEFAULT_TITLE
       upsertMeta('name', 'description', DEFAULT_DESCRIPTION)
     }
-  }, [title, description])
+  }, [title, description, pathname])
 
   return null
 }
