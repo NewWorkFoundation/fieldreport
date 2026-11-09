@@ -174,6 +174,7 @@ export function ResultsPage() {
   const [selectedSocs, setSelectedSocs] = useState<Set<string>>(() => new Set())
   const [selectedOrphans, setSelectedOrphans] = useState<Set<string>>(() => new Set())
   const [selectingJobs, setSelectingJobs] = useState(false)
+  const [emailedReport, setEmailedReport] = useState<{ cip: string; email: string } | null>(null)
 
   useEffect(() => {
     setShowAll(false)
@@ -182,6 +183,7 @@ export function ResultsPage() {
     setSelectedSocs(new Set())
     setSelectedOrphans(new Set())
     setSelectingJobs(false)
+    setEmailedReport(null)
   }, [cipCode])
 
   const major = useMemo(() => {
@@ -360,7 +362,7 @@ export function ResultsPage() {
 
   return (
     <div className={selectedRoles.length > 0 ? 'pb-28' : ''}>
-      {!isV2 && relevant.length > 0 && <FieldReportSignupPrompt key={cipCode} context={{ version: isV3 ? 'v3' : 'public', cip: cipCode, major: displayName, roles: selectedRoles.map(title => ({ title })) }} />}
+      {!isV2 && relevant.length > 0 && <FieldReportSignupPrompt key={cipCode} reportEmail={emailedReport?.cip === cipCode ? emailedReport.email : undefined} context={{ version: isV3 ? 'v3' : 'public', cip: cipCode, major: displayName, roles: selectedRoles.map(title => ({ title })) }} />}
       <DocumentMeta
         title={displayName}
         description={`BLS salaries, openings, and AI exposure for careers linked to ${displayName}.`}
@@ -444,6 +446,7 @@ export function ResultsPage() {
         selectedRoles={selectedRoles}
         sourceRef={cipCode ? `report:${cipCode}` : 'report'}
         onStartSelecting={() => setSelectingJobs(true)}
+        onReportSent={email => setEmailedReport({ cip: cipCode, email })}
       />
 
       <OccupationTable
@@ -640,11 +643,13 @@ function GameplanCta({
   selectedRoles,
   sourceRef,
   onStartSelecting,
+  onReportSent,
 }: {
   title: string
   selectedRoles: string[]
   sourceRef: string
   onStartSelecting: () => void
+  onReportSent: (email: string) => void
 }) {
   const count = selectedRoles.length
   const planHref = count > 0 ? gameplanHref(selectedRoles) : ''
@@ -657,6 +662,7 @@ function GameplanCta({
     focusAreas: selectedRoles.length ? selectedRoles : [title],
     sourceRef,
     includeReport: true,
+    onReportSent,
   })
 
   useEffect(() => {
