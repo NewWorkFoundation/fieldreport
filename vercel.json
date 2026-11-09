@@ -48,7 +48,39 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/",
+      "destination": "/search-pages/home.html"
+    },
+    {
+      "source": "/v2",
+      "destination": "/search-pages/home.html"
+    },
+    {
+      "source": "/v3",
+      "destination": "/search-pages/home.html"
+    },
+    {
+      "source": "/receipts",
+      "destination": "/search-pages/receipts.html"
+    },
+    {
+      "source": "/v2/receipts",
+      "destination": "/search-pages/receipts.html"
+    },
+    {
+      "source": "/v3/receipts",
+      "destination": "/search-pages/receipts.html"
+    },
+    {
+      "source": "/graphic",
+      "destination": "/search-pages/graphic.html"
+    },
+    {
+      "source": "/v3/roles",
+      "destination": "/search-pages/roles.html"
+    },
+    {
+      "source": "/((?!api(?:/|$)|robots\\.txt$|sitemap\\.xml$|search-pages/|assets/|brand/|data/|.*\\.(?:html|xml|txt|json|js|css|png|jpe?g|webp|svg|ico|woff2?)$).*)",
       "destination": "/index.html"
     }
   ],
@@ -77,6 +109,69 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/dev/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/v4/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/v2/results/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/v3/results/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/v3/roles/report",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
+        }
+      ]
+    },
+    {
+      "source": "/data/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, follow"
         }
       ]
     }
