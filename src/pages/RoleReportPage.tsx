@@ -1,3 +1,4 @@
+import { FieldReportSignupPrompt } from '../components/FieldReportSignupPrompt'
 import { withoutIdentity } from '../lib/identityParams'
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -53,6 +54,7 @@ export function RoleReportPage() {
 
   return (
     <div>
+      <FieldReportSignupPrompt key={selected.map(role => role.soc).join(',')} context={{ version: 'v3', roles: selected.map(role => ({ soc: role.soc, title: sentenceCase(role.title) })) }} />
       <DocumentMeta title="Your field report" description="A market comparison of your ranked target roles." />
       <section className="results-hero"><div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <Link to={`/v3/roles?${params.toString()}`} className="inline-flex min-h-11 items-center text-sm text-muted hover:text-ink">← Edit roles</Link>

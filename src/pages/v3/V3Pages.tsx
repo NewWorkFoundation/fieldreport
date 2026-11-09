@@ -1,3 +1,4 @@
+import { FieldReportSignupPrompt } from '../../components/FieldReportSignupPrompt'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BackLink } from '../../components/BackLink'
@@ -176,7 +177,7 @@ export function V3ZipPromptPage() {
 
 export function V3ResultsPage() {
   const { cipCode = '', zip = '' } = useParams()
-  const { resultsBase, home, receipts } = useAppPaths()
+  const { resultsBase, home, receipts, isV2, isV3 } = useAppPaths()
   const { majors } = useData()
   const [report, setReport] = useState<FieldReport | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -242,6 +243,7 @@ export function V3ResultsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-8 sm:pt-12 pb-8">
+      {!isV2 && <FieldReportSignupPrompt key={`${cipCode}:${zip}`} context={{ version: isV3 ? 'v3' : 'public', cip: cipCode, major: majorName || report.cip.title, zip, roles: [] }} />}
       <DocumentMeta
         title={`${majorName || report.cip.title} in ${report.place.cbsaName}`}
       />
