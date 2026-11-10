@@ -144,12 +144,12 @@ export function FieldReportSignupPrompt({ context, reportEmail }: { context: Rep
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
         </button>
+        <div className="pr-6"><BrandMark forceLight compact /></div>
         {reportEmail && (
-          <p role="status" className="mb-6 border-b border-black/10 pb-5 pr-6 text-sm leading-relaxed text-[#333] break-words">
+          <p role="status" className="mt-6 border-b border-black/10 pb-5 pr-6 text-sm leading-relaxed text-[#333] break-words">
             <strong>Sent.</strong> Check <span className="font-medium">{reportEmail}</span> for the report.
           </p>
         )}
-        <div className="pr-6"><BrandMark forceLight compact /></div>
         <h2 id="report-signup-title" className="mt-7 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Let’s get you hired.</h2>
         <p id="report-signup-description" className="mt-4 text-base leading-relaxed text-[#555]">Join a community of mentors and peers, get a personalized game plan, and stay current with AI in your field.</p>
         {reportEmail ? (
