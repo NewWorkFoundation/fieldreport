@@ -45,7 +45,7 @@ export function composeSubscribeEmail(input) {
   const reportUrl = String(input?.reportUrl || '').trim()
   const greeting = first ? `${first}, your Field Report.` : 'Your Field Report.'
   const body = 'Your report is ready. Get a clearer picture of what jobs pay, where the openings are, and which paths are worth a closer look.'
-  const cta = reportUrl ? 'Open my Field Report' : ''
+  const cta = reportUrl ? 'Open Field Report' : ''
   const signoff = 'CC + Team'
   const tagline = 'Own your future.'
   const subject = 'Your Field Report is ready'
