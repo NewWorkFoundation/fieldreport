@@ -2,24 +2,22 @@ const FROM =
   process.env.RESEND_FROM_EMAIL?.trim() ||
   'dearCC Field Report <hello@dearcc.org>'
 
-const ASSET_BASE = (
-  process.env.VITE_PUBLIC_SITE_URL ||
-  process.env.BASE_URL ||
-  'https://fieldreport.dearcc.org'
-).replace(/\/$/, '')
-
 /** Intent for this template. Rev this when you change copy or layout. */
 export const WELCOME_PROMPT = `Field Report welcome email.
 
-Voice: dearCC. Direct. No newsletter pitch. No em dashes.
+Voice: dearCC. Direct, useful, and encouraging. No newsletter pitch. No em dashes.
+Match the Game Plan email: white canvas, compact text wordmark and product label,
+black divider, clear heading, short sections, and CC + Team signoff.
 Typed name is dearCC (no brackets in body copy).
 Coral is accent only. Primary CTA is a black button with a white label.
+Use inline styles and presentation tables. Do not depend on external images.
 
 Must include:
-1. Greeting by first name when we have one, otherwise Hi,
-2. One line that the Field Report is ready
-3. A single CTA to the report URL when we have one
-4. Short signoff: dearCC / Own your future.`
+1. A report-ready heading, personalized by first name when available
+2. A short introduction and a scannable guide to pay, demand, and career paths
+3. A single CTA to the supplied report URL when we have one
+4. Encouraging signoff and a footer explaining why this email arrived
+5. Equivalent plain text and a useful inbox preview`
 
 function escapeHtml(value) {
   return String(value)
@@ -45,22 +43,38 @@ export function composeSubscribeEmail(input) {
   const to = String(input?.email || '').trim()
   const first = firstNameOf(input)
   const reportUrl = String(input?.reportUrl || '').trim()
-  const greeting = first ? `Hi ${first},` : 'Hi,'
-  const body = 'Your Field Report is ready. Open it for wages, openings, and the jobs this major actually leads to.'
-  const cta = reportUrl ? 'Open your Field Report' : ''
-  const signoff = 'dearCC'
+  const greeting = first ? `${first}, your Field Report.` : 'Your Field Report.'
+  const body = 'Your report is ready. Get a clearer picture of what jobs pay, where the openings are, and which paths are worth a closer look.'
+  const cta = reportUrl ? 'Open Field Report' : ''
+  const signoff = 'CC + Team'
   const tagline = 'Own your future.'
   const subject = 'Your Field Report is ready'
-  const logo = `${ASSET_BASE}/brand/dearcc-black-coral.svg`
+  const preheader = 'Pay, demand, and career paths. Your next move starts here.'
+  const sectionHeading = 'Inside your report'
+  const sections = [
+    { title: 'What jobs pay', body: 'Compare wages to put your options in perspective.' },
+    { title: 'Where the demand is', body: 'See job openings and where opportunities are concentrated.' },
+    { title: 'Where you could go', body: 'Explore career paths, including ones you might not have considered.' },
+  ]
+  const closing = "We're rooting for you."
+  const reason = 'You’re receiving this because you requested a Field Report on dearCC.'
+  const foundation = 'A New Work Foundation initiative, a 501(c)(3) nonprofit. Always free.'
 
+  const sectionsHtml = sections.map((section) => `<tr>
+    <td style="padding:0 0 18px;">
+      <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;line-height:1.4;color:#000000;">${escapeHtml(section.title)}</h3>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:#5c5c5c;">${escapeHtml(section.body)}</p>
+    </td>
+  </tr>`).join('\n')
+
+  // Keep the button inside the same content cell so email clients cannot
+  // discard its gutter independently of the body copy.
   const ctaHtml = reportUrl
-    ? `<tr>
-        <td style="padding:0 0 28px;">
-          <a href="${escapeHtml(reportUrl)}" style="display:inline-block;background:#000000;color:#ffffff;font-family:Inter,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;line-height:1;text-decoration:none;padding:14px 20px;border-radius:8px;">
-            ${escapeHtml(cta)}
-          </a>
-        </td>
-      </tr>`
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+        <tr><td bgcolor="#000000" style="border-radius:8px;text-align:center;mso-padding-alt:14px 22px;">
+          <a href="${escapeHtml(reportUrl)}" style="display:inline-block;border:1px solid #000000;border-radius:8px;background:#000000;color:#ffffff;font-size:15px;font-weight:700;line-height:20px;text-align:center;text-decoration:none;padding:13px 21px;mso-padding-alt:0;">${escapeHtml(cta)} &rarr;</a>
+        </td></tr>
+      </table>`
     : ''
 
   const html = `<!DOCTYPE html>
@@ -70,59 +84,46 @@ export function composeSubscribeEmail(input) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${escapeHtml(subject)}</title>
 </head>
-<body style="margin:0;padding:0;background:#f1f1f1;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f1f1;">
-    <tr>
-      <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:560px;max-width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
-          <tr>
-            <td style="height:4px;background:#ff5a3d;font-size:0;line-height:0;">&nbsp;</td>
-          </tr>
-          <tr>
-            <td style="padding:28px 32px 8px;">
-              <img src="${escapeHtml(logo)}" alt="dearCC" width="132" style="display:block;border:0;height:auto;">
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:8px 32px 0;font-family:Inter,Helvetica,Arial,sans-serif;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:#5c5c5c;">
-              Field Report
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:20px 32px 12px;font-family:Inter,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;line-height:1.3;color:#000000;">
-              ${escapeHtml(greeting)}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 32px 24px;font-family:Inter,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.55;color:#000000;">
-              ${escapeHtml(body)}
-            </td>
-          </tr>
+<body style="margin:0;padding:0;background:#ffffff;color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="display:none;font-size:1px;line-height:1px;color:#ffffff;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${escapeHtml(preheader)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="border-collapse:collapse;">
+    <tr><td align="center" style="padding:24px;">
+      <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;border-collapse:collapse;">
+        <tr><td style="padding:0 0 10px;border-bottom:2px solid #000000;">
+          <span style="font-size:19px;font-weight:900;letter-spacing:-.045em;color:#000000;">dear<span style="color:#ff5a3d;">[CC]</span></span><span style="display:inline-block;font-size:13px;font-weight:600;line-height:18px;color:#000000;border-left:1px solid #999999;padding-left:10px;margin-left:10px;">Field Report</span>
+        </td></tr>
+        <tr><td style="padding:24px 0 26px;">
+          <h1 style="margin:0 0 12px;font-size:26px;font-weight:700;letter-spacing:-.03em;line-height:1.2;color:#000000;overflow-wrap:anywhere;">${escapeHtml(greeting)}</h1>
+          <p style="margin:0;font-size:15px;line-height:1.65;color:#5c5c5c;">${escapeHtml(body)}</p>
+        </td></tr>
+        <tr><td>
+          <h2 style="margin:0 0 16px;font-size:17px;font-weight:700;letter-spacing:-.022em;line-height:1.4;color:#000000;">${escapeHtml(sectionHeading)}</h2>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">${sectionsHtml}</table>
           ${ctaHtml}
-          <tr>
-            <td style="padding:8px 32px 32px;font-family:Inter,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;color:#5c5c5c;">
-              ${escapeHtml(signoff)}<br>
-              ${escapeHtml(tagline)}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
+        </td></tr>
+        <tr><td style="padding:28px 0 26px;">
+          <p style="margin:0;font-size:15px;line-height:1.65;color:#000000;">${escapeHtml(closing)}<br><strong>${escapeHtml(signoff)}</strong></p>
+        </td></tr>
+        <tr><td style="padding:15px 0 0;border-top:1px solid #e2e2e2;">
+          <p style="margin:0;font-size:12px;line-height:1.65;color:#5c5c5c;">${escapeHtml(reason)}<br>${escapeHtml(foundation)}</p>
+        </td></tr>
+      </table>
+      <!--[if mso]></td></tr></table><![endif]-->
+    </td></tr>
   </table>
 </body>
 </html>`
 
   const text = [
+    'dearCC | Field Report',
     greeting,
-    '',
     body,
+    `${sectionHeading}\n${sections.map((section) => `${section.title}: ${section.body}`).join('\n\n')}`,
     reportUrl ? `${cta}: ${reportUrl}` : '',
-    '',
-    signoff,
-    tagline,
-  ]
-    .filter((line) => line !== '')
-    .join('\n')
+    `${closing}\n${signoff}`,
+    `${reason}\n${foundation}`,
+  ].filter(Boolean).join('\n\n')
 
   return {
     templateId: 'field-report-welcome',
