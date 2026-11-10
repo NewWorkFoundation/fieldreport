@@ -56,7 +56,7 @@ export function composeSubscribeEmail(input) {
     { title: 'Where the demand is', body: 'See job openings and where opportunities are concentrated.' },
     { title: 'Where you could go', body: 'Explore career paths, including ones you might not have considered.' },
   ]
-  const closing = "You don’t need to figure it all out today. Start with one path you’re curious about. We’re rooting for you."
+  const closing = "We're rooting for you."
   const reason = 'You’re receiving this because you requested a Field Report on dearCC.'
   const foundation = 'A New Work Foundation initiative, a 501(c)(3) nonprofit. Always free.'
 
