@@ -8,6 +8,7 @@ export type DigestSignupProps = {
   sourceRef?: string
   /** Include this report URL in the welcome email (defaults to the current page). */
   includeReport?: boolean
+  onReportSent?: (email: string) => void
 }
 
 type Status = 'idle' | 'sending' | 'sent' | 'skipped' | 'error'
@@ -32,6 +33,7 @@ export function useSubscribe({
   focusAreas,
   sourceRef,
   includeReport = false,
+  onReportSent,
 }: DigestSignupProps) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
@@ -40,6 +42,7 @@ export function useSubscribe({
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!email.trim()) return
+    const submittedEmail = email.trim()
     setStatus('sending')
     setErrorMsg(null)
     try {
@@ -48,7 +51,7 @@ export function useSubscribe({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: email.trim(),
+          email: submittedEmail,
           industry: industry ?? null,
           role: role ?? null,
           focusAreas: focusAreas ?? null,
@@ -61,10 +64,11 @@ export function useSubscribe({
         skipped?: string
         ok?: boolean
       }
-      if (!res.ok) {
+      if (!res.ok || data.ok !== true) {
         throw new Error(data.error ?? `request failed (${res.status})`)
       }
       setStatus(data.skipped === 'already_enrolled' ? 'skipped' : 'sent')
+      if (includeReport && !data.skipped) onReportSent?.(submittedEmail)
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Something went wrong')

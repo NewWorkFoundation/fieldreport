@@ -16,10 +16,13 @@ function hasSeenPrompt() {
   catch { return seenThisSession }
 }
 
-type DismissVia = 'close' | 'continue' | 'escape' | 'backdrop'
+function markPromptSeen() {
+  seenThisSession = true
+  try { sessionStorage.setItem(PROMPT_KEY, '1') } catch { /* In-memory fallback above. */ }
+}
 
 /** Mount only with usable report content, never on loading, empty, or error screens. */
-export function FieldReportSignupPrompt({ context }: { context: ReportSignupContext }) {
+export function FieldReportSignupPrompt({ context, reportEmail }: { context: ReportSignupContext; reportEmail?: string }) {
   const { version } = context
   const [open, setOpen] = useState(false)
   const [member, setMember] = useState(false)
@@ -28,6 +31,7 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
   const [previousSignup] = useState(() => hasSignup(V3_SIGNUP_KEY) || hasSignup(V2_SIGNUP_KEY))
   const dialogRef = useRef<HTMLDialogElement>(null)
   const viewed = useRef(false)
+  const promptedEmail = useRef<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -58,8 +62,7 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
     const maybeShow = () => {
       if (shown || !hasRead || !hasScrolled || document.visibilityState !== 'visible' || hasSeenPrompt()) return
       shown = true
-      seenThisSession = true
-      try { sessionStorage.setItem(PROMPT_KEY, '1') } catch { /* In-memory fallback above. */ }
+      markPromptSeen()
       trackFieldReport('field_report_signup_prompt_viewed', { version })
       setOpen(true)
     }
@@ -75,6 +78,15 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
     }
   }, [checking, member, previousSignup, version])
 
+  // Sending a report is a new explicit action, even after dismissing the scroll prompt.
+  useEffect(() => {
+    if (!reportEmail || checking || member || previousSignup || promptedEmail.current === reportEmail) return
+    promptedEmail.current = reportEmail
+    markPromptSeen()
+    trackFieldReport('field_report_signup_prompt_viewed', { version })
+    setOpen(true)
+  }, [reportEmail, checking, member, previousSignup, version])
+
   useEffect(() => {
     if (!open) return
     const dialog = dialogRef.current
@@ -89,12 +101,16 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
     }
   }, [open])
 
-  function dismiss(dismissVia: DismissVia) {
-    trackFieldReport('field_report_signup_prompt_dismissed', { version, dismissVia })
+  function dismiss() {
+    trackFieldReport('field_report_signup_prompt_dismissed', { version, dismissVia: 'close' })
     setOpen(false)
   }
 
   if (!open) return null
+  const signup = new URL(gamePlanSignupUrl(DEARCC_URL, context))
+  const ctaClassName = 'mt-7 flex min-h-12 w-full items-center justify-center rounded-lg bg-black px-5 py-3 text-base font-bold text-white no-underline transition-colors hover:bg-[#ff5a3d] hover:text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black'
+  const ctaLabel = <>Join dearCC for free <span className="ml-2" aria-hidden="true">→</span></>
+  const trackClick = () => trackFieldReport('field_report_signup_prompt_clicked', { version })
 
   return createPortal(
     <dialog
@@ -103,7 +119,7 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
       aria-describedby="report-signup-description"
       className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[30rem] overflow-y-auto rounded-2xl border border-black/10 bg-[#fffdf9] p-0 text-[#111] shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-sm"
       style={{ colorScheme: 'light' }}
-      onCancel={event => { event.preventDefault(); dismiss('escape') }}
+      onCancel={event => event.preventDefault()}
       onKeyDown={event => {
         if (event.key !== 'Tab') return
         const controls = event.currentTarget.querySelectorAll<HTMLElement>('button, a[href]')
@@ -117,18 +133,13 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
           first?.focus()
         }
       }}
-      onClick={event => {
-        if (event.target !== event.currentTarget) return
-        const bounds = event.currentTarget.getBoundingClientRect()
-        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dismiss('backdrop')
-      }}
     >
       <div className="relative p-6 sm:p-9">
         <button
           type="button"
           autoFocus
           aria-label="Close signup prompt"
-          onClick={() => dismiss('close')}
+          onClick={dismiss}
           className="absolute right-2 top-2 flex size-11 items-center justify-center rounded-full text-[#626262] hover:bg-black/5 hover:text-black focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -136,12 +147,13 @@ export function FieldReportSignupPrompt({ context }: { context: ReportSignupCont
         <div className="pr-6"><BrandMark forceLight compact /></div>
         <h2 id="report-signup-title" className="mt-7 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">Let’s get you hired.</h2>
         <p id="report-signup-description" className="mt-4 text-base leading-relaxed text-[#555]">Join a community of mentors and peers, get a personalized game plan, and stay current with AI in your field.</p>
-        <a
-          href={gamePlanSignupUrl(DEARCC_URL, context)}
-          onClick={() => trackFieldReport('field_report_signup_prompt_clicked', { version })}
-          className="mt-7 flex min-h-12 w-full items-center justify-center rounded-lg bg-black px-5 py-3 text-base font-bold text-white no-underline transition-colors hover:bg-[#ff5a3d] hover:text-black focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
-        >Join dearCC for free <span className="ml-2" aria-hidden="true">→</span></a>
-        <button type="button" onClick={() => dismiss('continue')} className="mt-2 min-h-11 w-full rounded-lg text-sm font-semibold text-[#555] hover:bg-black/5 hover:text-black focus-visible:outline-2 focus-visible:outline-black">Keep exploring Field Report</button>
+        {reportEmail ? (
+          <form method="post" action={`${signup.origin}${signup.pathname}`} onSubmit={trackClick}>
+            {Array.from(signup.searchParams.entries()).map(([name, value], i) => <input key={i} type="hidden" name={name} value={value} />)}
+            <input type="hidden" name="signupEmail" value={reportEmail} />
+            <button type="submit" className={ctaClassName}>{ctaLabel}</button>
+          </form>
+        ) : <a href={signup.href} onClick={trackClick} className={ctaClassName}>{ctaLabel}</a>}
         <p className="mt-4 text-center text-xs leading-relaxed text-[#666]">Field Report is free to use. No account required.</p>
       </div>
     </dialog>,
